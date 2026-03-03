@@ -1,136 +1,114 @@
 
-# Admin Sign-in Fix + About & Contact Content Management
+# MFC Premium 2026 Redesign
 
-## Issue Identified: Admin Sign-in
+## Overview
+A comprehensive visual and UX overhaul of the MFC website to transform it from a basic local restaurant page into a bold, high-converting, premium fast-food brand experience. All existing functionality (cart, admin, reviews, WhatsApp, open/close status) will be preserved.
 
-After investigation, I found there are **two user accounts** in the system:
+## Color & Typography Upgrade
 
-| Email | User ID | Has Admin Role? |
-|-------|---------|-----------------|
-| hashtagdropee@gmail.com | e7ca4f29-1930-420d-898e-d6c97b81357b | Yes |
-| jihalshimray1@gmail.com | f6e38e77-0d9f-4adb-84e5-b3d16238ef35 | **No** |
+**Updated Palette:**
+- Background: `#0a0a0a` (near-black) with warm undertones
+- Primary: `#8B1A1A` (deep crimson) -- kept
+- Gold accent: `#D4A853` (warm gold for CTAs and highlights)
+- Card surfaces: `#141414` with subtle warm tint
+- Text: `#F5F0EB` (warm white, not pure white)
 
-If you're trying to log in with `jihalshimray1@gmail.com`, that account doesn't have admin access yet. I'll add the admin role to this account as well.
+**Font:** Keep Inter/Sora but enforce heavier weights (700-900 for headlines, 400-500 for body).
 
----
+## Section-by-Section Changes
 
-## New Feature: About & Contact Content Management
+### 1. Hero Section (HeroSection.tsx) -- Full Rebuild
+- Replace emoji-based hero with a bold typographic layout
+- New headline: **"Ukhrul's Crispiest Fried Chicken"** with word-by-word animated reveal
+- Subheadline: "Handcrafted daily. Loved by thousands."
+- Three CTA buttons in a row: **Order Now** (gold, primary), **Get Directions** (outline), **Call Now** (green)
+- Animated stats strip below CTAs: "2000+ Customers Served", "5+ Years", "4.8 Rating"
+- Remove floating food emojis; replace with subtle radial gradient pulses and a warm golden light bloom
+- Keep open/close badge and promo badge
 
-I'll create an admin-manageable content system for "About" and "Contact" sections that will appear on the main website.
+### 2. "Why Choose MFC" Section (NEW component: WhyChooseSection.tsx)
+- 4 value blocks in a grid with icons:
+  - "Secret Spice Blend" (Flame icon)
+  - "Fresh, Never Frozen" (Snowflake icon)
+  - "Fast & Hot Delivery" (Truck icon)
+  - "Family Recipe Since Day 1" (Heart icon)
+- Glassmorphism cards with warm border glow on hover
+- Scroll-triggered fade-up entrance
 
-### Database Changes
+### 3. Menu Section (ProductGrid.tsx + ProductCard.tsx) -- Visual Upgrade
+- Section title: "Our Best Sellers" with gold accent underline
+- Product cards: darker card background (`#141414`), larger image area, golden price tag styling
+- Hover effect: warm golden border glow instead of orange, subtle upward lift
+- "Add to Cart" button uses gold accent on hover
+- Remove ember spark animations (too busy), keep oil-shine sweep
 
-**New Table: `site_content`**
-```text
-+------------------+-------------------+--------------------------------+
-| Column           | Type              | Description                    |
-+------------------+-------------------+--------------------------------+
-| id               | uuid (PK)         | Primary key                    |
-| section          | text              | 'about' or 'contact'           |
-| title            | text              | Section heading                |
-| content          | text              | Main content (supports rich)   |
-| address          | text (nullable)   | For contact section            |
-| email            | text (nullable)   | Contact email                  |
-| phone_1          | text (nullable)   | Primary phone                  |
-| phone_2          | text (nullable)   | Secondary phone                |
-| map_embed_url    | text (nullable)   | Google Maps embed URL          |
-| image_url        | text (nullable)   | Featured image                 |
-| updated_at       | timestamptz       | Last update timestamp          |
-+------------------+-------------------+--------------------------------+
-```
+### 4. Reviews Section (ReviewsSection.tsx) -- Polish
+- Keep existing functionality
+- Upgrade card styling: add subtle gold star glow, darker card backgrounds
+- Add quote marks decoration to review text
 
-**RLS Policies:**
-- Anyone can READ (public content)
-- Only admins can INSERT/UPDATE
+### 5. Footer (Footer.tsx) -- Conversion-Focused Rebuild
+- Add a bold pre-footer CTA section: "Ready to Order?" with gold "Order Now" button and "Call Now" secondary
+- Add location text: "Viewland Zone II, Ukhrul"
+- Keep existing contact info and hours grid
+- Add subtle gold divider line
 
----
+### 6. About Page (About.tsx) -- Typography & Layout Polish
+- Use shared Header component instead of standalone back button
+- Upgrade heading to use gold gradient text
+- Add animated counter section (Years, Customers, Menu Items)
 
-### New Files to Create
+### 7. Contact Page (Contact.tsx) -- Same Treatment
+- Use shared Header
+- Upgrade card hover effects to match new gold accent system
 
-1. **`src/pages/About.tsx`**
-   - Public page displaying About content from database
-   - Cinematic animations matching existing style
-   - Multi-layer parallax effects
-   - Slow, calm, confident motion per design specs
+### 8. Sticky Mobile Order Bar (NEW: MobileOrderBar.tsx)
+- Fixed bottom bar on mobile only (below md breakpoint)
+- Shows: "Order Now" button (gold), Phone icon, WhatsApp icon
+- Appears after scrolling past hero section
+- Glassmorphism background
 
-2. **`src/pages/Contact.tsx`**
-   - Public page displaying Contact information
-   - Interactive map embed
-   - Contact form (optional - sends via WhatsApp)
-   - Animated icons with stroke-draw effects
+### 9. Header (Header.tsx) -- Minor Polish
+- Add gold accent to logo glow instead of crimson-only
+- Remove "Admin" link from public nav (keep at /admin URL, just not in nav)
+- Improve glassmorphism opacity values for better readability
 
-3. **`src/pages/admin/AdminContent.tsx`**
-   - Admin page to manage About and Contact content
-   - Rich text editing for descriptions
-   - Image upload for featured images
-   - Live preview of changes
+### 10. Loading Screen (CinematicLoader.tsx) -- Keep As-Is
+- Already has premium feel, no changes needed
 
-4. **`src/hooks/useSiteContent.ts`**
-   - Custom hook for fetching/updating site content
-   - React Query integration for caching
+## CSS Updates (index.css)
+- Add `--brand-gold` as usable accent throughout
+- Add `.shadow-gold-glow` utility
+- Refine card surface colors for warmer dark tones
+- Add `.text-warm-white` utility class
 
----
+## Technical Details
 
-### Files to Modify
+### Files to Create:
+1. `src/components/home/WhyChooseSection.tsx` -- 4-block value proposition grid
+2. `src/components/common/MobileOrderBar.tsx` -- sticky bottom CTA bar for mobile
 
-1. **`src/App.tsx`**
-   - Add routes: `/about`, `/contact`, `/admin/content`
+### Files to Modify:
+1. `src/index.css` -- updated CSS variables, new utility classes
+2. `src/components/home/HeroSection.tsx` -- full visual rebuild (same data hooks)
+3. `src/components/products/ProductCard.tsx` -- styling upgrades, gold accents
+4. `src/components/products/ProductGrid.tsx` -- section title upgrade
+5. `src/components/home/ReviewsSection.tsx` -- card styling polish
+6. `src/components/layout/Header.tsx` -- remove admin from nav, polish glassmorphism
+7. `src/components/layout/Footer.tsx` -- add pre-footer CTA section
+8. `src/pages/Index.tsx` -- add WhyChooseSection, MobileOrderBar
+9. `src/pages/About.tsx` -- use shared Header, styling polish
+10. `src/pages/Contact.tsx` -- use shared Header, styling polish
 
-2. **`src/components/admin/AdminSidebar.tsx`**
-   - Add "Site Content" navigation item with FileText icon
+### No Changes To:
+- Admin pages (keep functional, not customer-facing)
+- Cart functionality
+- Database/backend
+- Checkout flow
+- WhatsApp integration logic
 
-3. **`src/components/layout/Header.tsx`**
-   - Add navigation links to About and Contact pages
-
-4. **`src/components/layout/Footer.tsx`**
-   - Add links to About and Contact pages
-
----
-
-### Implementation Summary
-
-```text
-Phase 1: Fix Admin Access
-  - Add admin role to jihalshimray1@gmail.com
-
-Phase 2: Database Setup
-  - Create site_content table with RLS policies
-  - Seed initial content for About and Contact
-
-Phase 3: Admin Interface
-  - Create AdminContent.tsx for content management
-  - Add to admin sidebar navigation
-  - Include image upload capability
-
-Phase 4: Public Pages
-  - Create About.tsx with cinematic animations
-  - Create Contact.tsx with map and contact info
-  - Add navigation links in Header and Footer
-
-Phase 5: Testing
-  - Verify admin can edit content
-  - Confirm public pages display correctly
-  - Test responsive design on mobile
-```
-
----
-
-### Technical Details
-
-**Cinematic Animations for About Page:**
-- Slow parallax scrolling on images
-- Text fades in slower than rest of site
-- Icons animate with stroke-draw effects
-- Background grain becomes more visible
-
-**Contact Page Features:**
-- Google Maps embed with warm-toned overlay
-- Contact details with hover animations
-- Optional WhatsApp contact form
-- Animated social icons on proximity
-
-**Admin Content Editor:**
-- Textarea for content (Markdown-ready)
-- Image upload using existing Supabase storage
-- Real-time save indicator
-- Preview toggle to see changes
+## Performance Considerations
+- Remove unnecessary emoji animations (reduce DOM nodes)
+- Reduce ember/particle count in hero
+- Use `will-change` sparingly and only on actively animated elements
+- Keep Framer Motion `viewport={{ once: true }}` for all scroll animations
