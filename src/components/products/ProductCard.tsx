@@ -1,6 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Product, Category } from '@/types/database';
@@ -13,13 +13,11 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
-  const { addItem } = useCart();
+  const { items, addItem, updateQuantity } = useCart();
   const { data: promotions } = useActivePromotions();
-  const [isHovered, setIsHovered] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const imageCount = product.images?.length || 0;
+
+  const cartItem = items.find(i => i.product.id === product.id);
+  const quantity = cartItem?.quantity || 0;
 
   const activeDiscount = promotions?.find(
     p => p.applies_to_all || p.product_ids?.includes(product.id)
@@ -27,205 +25,140 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
   const discountPercentage = activeDiscount?.discount_percentage || 0;
   const discountedPrice = product.price * (1 - discountPercentage / 100);
 
-  const handleAddToCart = () => {
-    if (product.in_stock && !isAdding) {
-      setIsAdding(true);
-      addItem(product);
-      setTimeout(() => setIsAdding(false), 600);
-    }
+  const handleAdd = () => {
+    if (product.in_stock) addItem(product);
   };
+
+  const handleDecrement = () => {
+    if (quantity > 0) updateQuantity(product.id, quantity - 1);
+  };
+
+  const imageUrl = product.images?.[0];
 
   return (
     <motion.div
-      ref={cardRef}
-      initial={{ opacity: 0, y: 30, filter: 'blur(4px)' }}
-      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-      transition={{ 
-        delay: index * 0.1, 
-        duration: 0.8, 
-        ease: [0.19, 1, 0.22, 1] 
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="group relative overflow-hidden rounded-xl border border-border/50 bg-card transition-all duration-700 ease-cinematic"
-      style={{
-        boxShadow: isHovered 
-          ? '0 25px 50px -12px hsl(var(--brand-gold) / 0.15), 0 0 0 1px hsl(var(--brand-gold) / 0.15)'
-          : '0 4px 6px -1px rgb(0 0 0 / 0.2)',
-        transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
-      }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ delay: index * 0.05, duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
+      className="group relative flex flex-row md:flex-col rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm hover:shadow-lg hover:border-border/80 transition-all duration-300"
     >
-      {/* Image Container */}
-      <div className="relative aspect-square overflow-hidden bg-muted">
-        {product.images && product.images.length > 0 ? (
-          <>
-            <motion.img
-              key={currentImageIndex}
-              src={product.images[currentImageIndex]}
-              alt={product.name}
-              className="h-full w-full object-cover"
-              initial={{ opacity: 0.5 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              style={{
-                transform: isHovered ? 'scale(1.06)' : 'scale(1)',
-                transition: 'transform 0.7s cubic-bezier(0.19, 1, 0.22, 1)',
-              }}
-            />
-            {imageCount > 1 && isHovered && (
-              <>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(i => (i - 1 + imageCount) % imageCount); }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-background/70 backdrop-blur-sm rounded-full p-1 shadow-md hover:bg-background/90 transition-colors"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(i => (i + 1) % imageCount); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-background/70 backdrop-blur-sm rounded-full p-1 shadow-md hover:bg-background/90 transition-colors"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </>
-            )}
-            {imageCount > 1 && (
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1">
-                {product.images.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(i); }}
-                    className={`w-2 h-2 rounded-full transition-colors ${i === currentImageIndex ? 'bg-primary' : 'bg-background/60'}`}
-                  />
-                ))}
-              </div>
-            )}
-          </>
+      {/* Image */}
+      <div className="relative w-28 h-28 md:w-full md:h-44 flex-shrink-0 overflow-hidden bg-muted">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
+          />
         ) : (
-          <motion.div 
-            className="flex h-full w-full items-center justify-center text-6xl select-none"
-            animate={{ scale: isHovered ? 1.06 : 1 }}
-            transition={{ duration: 0.7, ease: [0.19, 1, 0.22, 1] }}
-          >
+          <div className="flex h-full w-full items-center justify-center text-4xl md:text-5xl select-none bg-muted">
             🍗
-          </motion.div>
-        )}
-
-        {/* Oil shine sweep on hover */}
-        <AnimatePresence>
-          {isHovered && (
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: '200%' }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.2, ease: [0.19, 1, 0.22, 1] }}
-              className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 pointer-events-none"
-            />
-          )}
-        </AnimatePresence>
-
-        {/* Discount Badge */}
-        {discountPercentage > 0 && (
-          <motion.div
-            initial={{ scale: 0, rotate: -12 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ duration: 0.6, ease: [0.19, 1, 0.22, 1] }}
-            className="absolute left-3 top-3"
-          >
-            <Badge className="bg-primary text-primary-foreground font-bold shadow-lg">
-              -{discountPercentage}%
-            </Badge>
-          </motion.div>
-        )}
-
-        {/* Out of Stock Overlay */}
-        {!product.in_stock && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-            <Badge variant="destructive" className="text-sm shadow-lg">
-              Out of Stock
-            </Badge>
           </div>
         )}
 
-        {/* Add to Cart Button (slides up on hover) */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ 
-            opacity: isHovered ? 1 : 0, 
-            y: isHovered ? 0 : 30 
-          }}
-          transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
-          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent p-4"
-        >
-          <motion.div whileTap={{ scale: 0.96 }} transition={{ duration: 0.2 }}>
-            <Button
-              onClick={handleAddToCart}
-              disabled={!product.in_stock}
-              className="w-full shadow-lg"
-              size="sm"
-            >
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Add to Cart
-            </Button>
-          </motion.div>
-        </motion.div>
+        {/* Discount badge */}
+        {discountPercentage > 0 && (
+          <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-bold shadow-md">
+            -{discountPercentage}%
+          </Badge>
+        )}
+
+        {/* Out of stock overlay */}
+        {!product.in_stock && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <Badge variant="destructive" className="text-xs">Out of Stock</Badge>
+          </div>
+        )}
       </div>
 
       {/* Content */}
-      <div className="p-4 relative">
-        {product.category && (
-          <motion.span 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: index * 0.1 + 0.3 }}
-            className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
-          >
-            {product.category.name}
-          </motion.span>
-        )}
-        <h3 className="mt-1 font-semibold line-clamp-1">{product.name}</h3>
-        {product.description && (
-          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-            {product.description}
-          </p>
-        )}
+      <div className="flex flex-col flex-1 p-3 md:p-4 justify-between min-w-0">
+        <div>
+          {product.category && (
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-gold">
+              {product.category.name}
+            </span>
+          )}
+          <h3 className="font-bold text-sm md:text-base leading-tight line-clamp-1 mt-0.5">
+            {product.name}
+          </h3>
+          {product.description && (
+            <p className="text-xs text-muted-foreground line-clamp-1 md:line-clamp-2 mt-1">
+              {product.description}
+            </p>
+          )}
+        </div>
 
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-baseline gap-2">
-            <motion.span 
-              key={discountedPrice}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-lg font-black text-gold"
-            >
-              ₹{discountedPrice.toFixed(2)}
-            </motion.span>
+        <div className="flex items-center justify-between mt-2 gap-2">
+          {/* Price */}
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-base md:text-lg font-black text-gold">
+              ₹{discountedPrice.toFixed(0)}
+            </span>
             {discountPercentage > 0 && (
-              <span className="text-sm text-muted-foreground line-through">
-                ₹{product.price.toFixed(2)}
+              <span className="text-xs text-muted-foreground line-through">
+                ₹{product.price.toFixed(0)}
               </span>
             )}
           </div>
 
-          <motion.div 
-            whileHover={{ scale: 1.08 }} 
-            whileTap={{ scale: 0.92 }}
-            transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
-          >
-            <Button
-              variant="secondary"
-              size="icon"
-              onClick={handleAddToCart}
-              disabled={!product.in_stock}
-              className="h-9 w-9 shadow-md"
-            >
+          {/* Add / Quantity Stepper */}
+          <AnimatePresence mode="wait">
+            {quantity === 0 ? (
               <motion.div
-                animate={isAdding ? { rotate: [0, 15, -15, 0] } : {}}
-                transition={{ duration: 0.4 }}
+                key="add"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
-                <Plus className="h-4 w-4" />
+                <Button
+                  size="sm"
+                  onClick={handleAdd}
+                  disabled={!product.in_stock}
+                  className="h-8 px-4 text-xs font-bold uppercase tracking-wide rounded-lg shadow-md"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(var(--brand-gold)) 0%, hsl(35 80% 48%) 100%)',
+                    color: 'hsl(0 0% 5%)',
+                  }}
+                >
+                  ADD
+                </Button>
               </motion.div>
-            </Button>
-          </motion.div>
+            ) : (
+              <motion.div
+                key="stepper"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-0 rounded-lg border border-border overflow-hidden shadow-sm"
+              >
+                <button
+                  onClick={handleDecrement}
+                  className="h-8 w-8 flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <motion.span
+                  key={quantity}
+                  initial={{ scale: 1.3 }}
+                  animate={{ scale: 1 }}
+                  className="h-8 w-8 flex items-center justify-center text-sm font-bold text-gold"
+                >
+                  {quantity}
+                </motion.span>
+                <button
+                  onClick={handleAdd}
+                  className="h-8 w-8 flex items-center justify-center hover:bg-muted transition-colors text-gold"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>
