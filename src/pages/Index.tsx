@@ -33,7 +33,7 @@ const Index: React.FC = () => {
         <Header />
         <main className="flex-1">
           <HeroSection />
-          <WhyChooseSection />
+          
           <PromoBanner />
           <section id="menu">
             <ProductGrid />

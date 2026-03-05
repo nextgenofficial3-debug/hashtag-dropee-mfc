@@ -209,14 +209,21 @@ const HeroSection: React.FC = () => {
             </motion.div>
 
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              <a
-                href={`tel:${settings?.whatsapp_primary?.replace(/[^0-9+]/g, '')}`}
-              >
+              <a href={`tel:${settings?.whatsapp_primary?.replace(/[^0-9+]/g, '')}`}>
                 <Button size="lg" className="text-base px-8 py-6 bg-green-600 hover:bg-green-700 text-white">
                   <Phone className="h-5 w-5 mr-2" />
                   Call Now
                 </Button>
               </a>
+            </motion.div>
+
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <Link to="/install">
+                <Button size="lg" variant="outline" className="text-base px-8 py-6 border-border/50 text-foreground hover:border-foreground/30">
+                  <Download className="h-5 w-5 mr-2" />
+                  Install App
+                </Button>
+              </Link>
             </motion.div>
           </motion.div>
 
