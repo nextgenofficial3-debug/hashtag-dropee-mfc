@@ -81,12 +81,30 @@ const Checkout: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.phone || !formData.address) {
       toast.error('Please fill in all required fields');
       return;
+    }
+
+    // Save order to database
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.from('orders').insert({
+        customer_name: formData.name,
+        customer_phone: formData.phone,
+        customer_address: formData.address,
+        special_instructions: formData.instructions || null,
+        payment_method: formData.paymentMethod,
+        items: items.map(i => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })),
+        subtotal,
+        discount: discountAmount,
+        total,
+      });
+    } catch (err) {
+      console.error('Failed to save order:', err);
     }
 
     const whatsappLink = generateWhatsAppLink(

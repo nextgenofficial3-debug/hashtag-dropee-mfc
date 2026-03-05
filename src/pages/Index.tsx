@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/home/HeroSection';
-import WhyChooseSection from '@/components/home/WhyChooseSection';
+
 import PromoBanner from '@/components/home/PromoBanner';
 import ProductGrid from '@/components/products/ProductGrid';
 import ReviewsSection from '@/components/home/ReviewsSection';
@@ -33,7 +33,7 @@ const Index: React.FC = () => {
         <Header />
         <main className="flex-1">
           <HeroSection />
-          <WhyChooseSection />
+          
           <PromoBanner />
           <section id="menu">
             <ProductGrid />

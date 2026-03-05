@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -32,6 +59,51 @@ export type Database = {
           display_order?: number | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_address: string
+          customer_name: string
+          customer_phone: string
+          discount: number
+          id: string
+          items: Json
+          payment_method: string
+          special_instructions: string | null
+          status: string
+          subtotal: number
+          total: number
+        }
+        Insert: {
+          created_at?: string
+          customer_address: string
+          customer_name: string
+          customer_phone: string
+          discount?: number
+          id?: string
+          items: Json
+          payment_method?: string
+          special_instructions?: string | null
+          status?: string
+          subtotal: number
+          total: number
+        }
+        Update: {
+          created_at?: string
+          customer_address?: string
+          customer_name?: string
+          customer_phone?: string
+          discount?: number
+          id?: string
+          items?: Json
+          payment_method?: string
+          special_instructions?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
         }
         Relationships: []
       }
