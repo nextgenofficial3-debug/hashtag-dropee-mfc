@@ -221,7 +221,7 @@ const HeroSection: React.FC = () => {
               <Link to="/install">
                 <Button size="lg" variant="outline" className="text-base px-8 py-6 border-border/50 text-foreground hover:border-foreground/30">
                   <Download className="h-5 w-5 mr-2" />
-                  Install App
+                  Download App
                 </Button>
               </Link>
             </motion.div>
