@@ -4,8 +4,16 @@ export const formatOrderMessage = (
   items: CartItem[],
   subtotal: number,
   discount: number,
-  formData: CheckoutFormData
+  formData: CheckoutFormData,
+  packagingFee: number = 60,
+  deliveryBaseFee: number = 100,
+  deliveryKm: number = 0,
+  deliveryPerKm: number = 50
 ): string => {
+  const deliveryKmFee = deliveryKm * deliveryPerKm;
+  const totalDelivery = deliveryBaseFee + deliveryKmFee;
+  const grandTotal = subtotal - discount + packagingFee + totalDelivery;
+
   const lines = [
     '🍗 *NEW ORDER - MFC Makyo Fried Chicken* 🍗',
     '',
@@ -31,10 +39,18 @@ export const formatOrderMessage = (
   if (discount > 0) {
     lines.push(`Discount: -₹${discount.toFixed(2)}`);
   }
-  
-  lines.push(`*Total: ₹${(subtotal - discount).toFixed(2)}*`);
+
+  lines.push(`📦 Packaging Fee: ₹${packagingFee}`);
   lines.push('');
-  lines.push('🚚 *Delivery: ₹50/km (Hashtag Dropee)*');
+  lines.push('🚚 *Delivery (Hashtag Dropee):*');
+  lines.push(`   Base Fee: ₹${deliveryBaseFee}`);
+  if (deliveryKm > 0) {
+    lines.push(`   Distance: ${deliveryKm} km × ₹${deliveryPerKm} = ₹${deliveryKmFee}`);
+  }
+  lines.push(`   Total Delivery: ₹${totalDelivery}`);
+
+  lines.push('');
+  lines.push(`*Grand Total: ₹${grandTotal.toFixed(2)}*`);
 
   lines.push('');
   lines.push(`💳 Payment Method: ${formData.paymentMethod === 'gpay' ? 'GPay (UPI)' : 'Cash on Delivery'}`);
@@ -53,9 +69,13 @@ export const generateWhatsAppLink = (
   items: CartItem[],
   subtotal: number,
   discount: number,
-  formData: CheckoutFormData
+  formData: CheckoutFormData,
+  packagingFee?: number,
+  deliveryBaseFee?: number,
+  deliveryKm?: number,
+  deliveryPerKm?: number
 ): string => {
   const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
-  const message = formatOrderMessage(items, subtotal, discount, formData);
+  const message = formatOrderMessage(items, subtotal, discount, formData, packagingFee, deliveryBaseFee, deliveryKm, deliveryPerKm);
   return `https://wa.me/${cleanPhone}?text=${message}`;
 };
