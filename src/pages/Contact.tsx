@@ -143,24 +143,15 @@ const Contact: React.FC = () => {
             transition={{ duration: 1, delay: 0.4, ease: [0.19, 1, 0.22, 1] }}
             className="relative rounded-2xl overflow-hidden shadow-2xl aspect-square lg:aspect-auto lg:h-full min-h-[400px] border border-border/50"
           >
-            {contactContent?.map_embed_url ? (
-              <iframe
-                src={contactContent.map_embed_url}
-                width="100%" height="100%"
-                style={{ border: 0 }}
-                allowFullScreen loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Store Location"
-                className="absolute inset-0"
-              />
-            ) : (
-              <div className="absolute inset-0 bg-card flex items-center justify-center">
-                <div className="text-center p-8">
-                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Map coming soon</p>
-                </div>
-              </div>
-            )}
+            <iframe
+              src={contactContent?.map_embed_url || 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14326.0!2d94.3617!3d25.1167!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3741e3a94d4a5c1f%3A0x5ef5a9f5c5e5c5a5!2sViewland%20Zone%20II%2C%20Ukhrul%2C%20Manipur!5e0!3m2!1sen!2sin!4v1'}
+              width="100%" height="100%"
+              style={{ border: 0 }}
+              allowFullScreen loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Store Location"
+              className="absolute inset-0"
+            />
             <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, hsl(var(--background) / 0.3), transparent 30%)' }} />
           </motion.div>
         </div>

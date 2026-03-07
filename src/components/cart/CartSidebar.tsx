@@ -233,13 +233,23 @@ const CartSidebar: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              <div className="flex justify-between text-muted-foreground">
+                <span>📦 Packaging</span>
+                <span>₹60</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>🚚 Delivery</span>
+                <span className="text-xs text-right">calculated at checkout</span>
+              </div>
               
               <Separator />
               
               <div className="flex justify-between text-lg font-semibold">
-                <span>Total</span>
-                <AnimatedNumber value={total} prefix="₹" />
+                <span>Subtotal</span>
+                <AnimatedNumber value={total + 60} prefix="₹" />
               </div>
+              <p className="text-xs text-muted-foreground">+ delivery fee at checkout</p>
             </div>
 
             <Link to="/checkout" onClick={() => setIsCartOpen(false)}>
