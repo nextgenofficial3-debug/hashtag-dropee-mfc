@@ -34,9 +34,6 @@ const AdminNotifications: React.FC = () => {
       return data || [];
     },
   });
-      return data || [];
-    },
-  });
 
   const { data: subscriberCount } = useQuery({
     queryKey: ['subscriber-count'],
