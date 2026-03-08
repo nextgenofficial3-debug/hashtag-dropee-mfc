@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, Trash2 } from 'lucide-react';
+import { Star, Trash2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +32,17 @@ const AdminReviews: React.FC = () => {
     },
   });
 
+  const toggleApproval = async (id: string, currentStatus: boolean) => {
+    const { error } = await supabase.from('reviews').update({ is_approved: !currentStatus }).eq('id', id);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: currentStatus ? 'Review hidden' : 'Review approved' });
+      queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['approved-reviews'] });
+    }
+  };
+
   const deleteReview = async (id: string) => {
     const { error } = await supabase.from('reviews').delete().eq('id', id);
     if (error) {
@@ -48,7 +60,7 @@ const AdminReviews: React.FC = () => {
     <div className="space-y-4 sm:space-y-6">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold">Customer Reviews</h1>
-        <p className="text-sm text-muted-foreground">All reviews are published automatically. Delete inappropriate ones.</p>
+        <p className="text-sm text-muted-foreground">Manage and moderate customer reviews</p>
       </div>
 
       <div className="grid gap-3">
@@ -65,6 +77,9 @@ const AdminReviews: React.FC = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="font-semibold text-sm">{review.customer_name}</span>
+                <Badge variant={review.is_approved ? 'default' : 'secondary'} className="text-[10px]">
+                  {review.is_approved ? 'Visible' : 'Hidden'}
+                </Badge>
                 <span className="text-xs text-muted-foreground/50">{new Date(review.created_at).toLocaleDateString()}</span>
               </div>
               <div className="flex gap-0.5 mb-1.5">
@@ -74,9 +89,14 @@ const AdminReviews: React.FC = () => {
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2">{review.review_text}</p>
             </div>
-            <Button size="icon" variant="ghost" className="shrink-0 text-destructive hover:bg-destructive/10" onClick={() => deleteReview(review.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-1 shrink-0">
+              <Button size="icon" variant="ghost" onClick={() => toggleApproval(review.id, review.is_approved)} title={review.is_approved ? 'Hide' : 'Show'}>
+                {review.is_approved ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => deleteReview(review.id)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </motion.div>
         ))}
       </div>
