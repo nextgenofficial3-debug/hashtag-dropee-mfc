@@ -104,7 +104,8 @@ const AdminSettings: React.FC = () => {
   };
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-  const apiEndpoint = `https://${projectId}.supabase.co/functions/v1/orders-api`;
+  const apiBaseUrl = `https://${projectId}.supabase.co/functions/v1`;
+  const apiEndpoint = `${apiBaseUrl}/orders-api`;
 
   if (isLoading) {
     return (
