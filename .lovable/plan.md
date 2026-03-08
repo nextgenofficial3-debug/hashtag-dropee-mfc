@@ -1,45 +1,114 @@
 
+# MFC Premium 2026 Redesign
 
-# Fix PWA Manifest: Add 512x512 Icons + Service Worker
+## Overview
+A comprehensive visual and UX overhaul of the MFC website to transform it from a basic local restaurant page into a bold, high-converting, premium fast-food brand experience. All existing functionality (cart, admin, reviews, WhatsApp, open/close status) will be preserved.
 
-## Problem
-PWA Builder reports the manifest is missing:
-1. A **512x512 PNG icon** (only has small favicon.ico)
-2. The `start_url` field (it's actually present in manifest.json, so PWA Builder may have read an older version)
+## Color & Typography Upgrade
 
-The user also uploaded a **service worker file** (`pwabuilder-sw.js`) to enable offline support.
+**Updated Palette:**
+- Background: `#0a0a0a` (near-black) with warm undertones
+- Primary: `#8B1A1A` (deep crimson) -- kept
+- Gold accent: `#D4A853` (warm gold for CTAs and highlights)
+- Card surfaces: `#141414` with subtle warm tint
+- Text: `#F5F0EB` (warm white, not pure white)
 
-## Plan
+**Font:** Keep Inter/Sora but enforce heavier weights (700-900 for headlines, 400-500 for body).
 
-### 1. Generate PWA Icons
-Since no 512x512 image was provided, I'll create a simple SVG-based icon set programmatically and reference them in the manifest. The icons will use the MFC brand colors (crimson `#8B1A1A` background, gold `#D4A853` text "MFC").
+## Section-by-Section Changes
 
-Create SVG icons at these sizes and add to `public/`:
-- `public/icon-192.png` — use an inline SVG-to-canvas approach isn't possible in static files, so instead create a **single SVG icon** (`public/icon.svg`) that scales to any size, and reference it as `any` size in the manifest with `purpose: "any maskable"`.
+### 1. Hero Section (HeroSection.tsx) -- Full Rebuild
+- Replace emoji-based hero with a bold typographic layout
+- New headline: **"Ukhrul's Crispiest Fried Chicken"** with word-by-word animated reveal
+- Subheadline: "Handcrafted daily. Loved by thousands."
+- Three CTA buttons in a row: **Order Now** (gold, primary), **Get Directions** (outline), **Call Now** (green)
+- Animated stats strip below CTAs: "2000+ Customers Served", "5+ Years", "4.8 Rating"
+- Remove floating food emojis; replace with subtle radial gradient pulses and a warm golden light bloom
+- Keep open/close badge and promo badge
 
-Actually, the simplest approach: create a high-quality SVG icon and list it in the manifest. PWA Builder accepts SVG icons with `"sizes": "any"`.
+### 2. "Why Choose MFC" Section (NEW component: WhyChooseSection.tsx)
+- 4 value blocks in a grid with icons:
+  - "Secret Spice Blend" (Flame icon)
+  - "Fresh, Never Frozen" (Snowflake icon)
+  - "Fast & Hot Delivery" (Truck icon)
+  - "Family Recipe Since Day 1" (Heart icon)
+- Glassmorphism cards with warm border glow on hover
+- Scroll-triggered fade-up entrance
 
-### 2. Update `public/manifest.json`
-- Ensure `start_url: "/"` is present (it already is, but re-confirm)
-- Add the SVG icon entry with `"sizes": "any"` and `"purpose": "any maskable"`
-- Add `"id": "/"` for PWA identity
+### 3. Menu Section (ProductGrid.tsx + ProductCard.tsx) -- Visual Upgrade
+- Section title: "Our Best Sellers" with gold accent underline
+- Product cards: darker card background (`#141414`), larger image area, golden price tag styling
+- Hover effect: warm golden border glow instead of orange, subtle upward lift
+- "Add to Cart" button uses gold accent on hover
+- Remove ember spark animations (too busy), keep oil-shine sweep
 
-### 3. Add Service Worker
-- Copy `user-uploads://pwabuilder-sw.js` to `public/pwabuilder-sw.js`
-- Update the offline fallback page reference to `"/"`  
-- Register the service worker in `index.html` with a `<script>` tag
+### 4. Reviews Section (ReviewsSection.tsx) -- Polish
+- Keep existing functionality
+- Upgrade card styling: add subtle gold star glow, darker card backgrounds
+- Add quote marks decoration to review text
 
-### 4. Create Offline Fallback Page
-- Create a minimal `public/offline.html` page with MFC branding that shows when offline
+### 5. Footer (Footer.tsx) -- Conversion-Focused Rebuild
+- Add a bold pre-footer CTA section: "Ready to Order?" with gold "Order Now" button and "Call Now" secondary
+- Add location text: "Viewland Zone II, Ukhrul"
+- Keep existing contact info and hours grid
+- Add subtle gold divider line
 
-## Files to Create
-1. `public/icon.svg` — 512x512-compatible SVG icon with MFC branding
-2. `public/offline.html` — offline fallback page
-3. `public/pwabuilder-sw.js` — copied from user upload, with offline page reference fixed
+### 6. About Page (About.tsx) -- Typography & Layout Polish
+- Use shared Header component instead of standalone back button
+- Upgrade heading to use gold gradient text
+- Add animated counter section (Years, Customers, Menu Items)
 
-## Files to Edit
-1. `public/manifest.json` — add SVG icon, ensure start_url and id
-2. `index.html` — add service worker registration script
+### 7. Contact Page (Contact.tsx) -- Same Treatment
+- Use shared Header
+- Upgrade card hover effects to match new gold accent system
 
-**Note:** For a fully compliant PWA with raster icons (PNG 192x192 and 512x512), you would need to provide or generate actual PNG images. The SVG approach satisfies most modern browsers. If you have a logo image file, share it and I can generate proper PNG icons from it.
+### 8. Sticky Mobile Order Bar (NEW: MobileOrderBar.tsx)
+- Fixed bottom bar on mobile only (below md breakpoint)
+- Shows: "Order Now" button (gold), Phone icon, WhatsApp icon
+- Appears after scrolling past hero section
+- Glassmorphism background
 
+### 9. Header (Header.tsx) -- Minor Polish
+- Add gold accent to logo glow instead of crimson-only
+- Remove "Admin" link from public nav (keep at /admin URL, just not in nav)
+- Improve glassmorphism opacity values for better readability
+
+### 10. Loading Screen (CinematicLoader.tsx) -- Keep As-Is
+- Already has premium feel, no changes needed
+
+## CSS Updates (index.css)
+- Add `--brand-gold` as usable accent throughout
+- Add `.shadow-gold-glow` utility
+- Refine card surface colors for warmer dark tones
+- Add `.text-warm-white` utility class
+
+## Technical Details
+
+### Files to Create:
+1. `src/components/home/WhyChooseSection.tsx` -- 4-block value proposition grid
+2. `src/components/common/MobileOrderBar.tsx` -- sticky bottom CTA bar for mobile
+
+### Files to Modify:
+1. `src/index.css` -- updated CSS variables, new utility classes
+2. `src/components/home/HeroSection.tsx` -- full visual rebuild (same data hooks)
+3. `src/components/products/ProductCard.tsx` -- styling upgrades, gold accents
+4. `src/components/products/ProductGrid.tsx` -- section title upgrade
+5. `src/components/home/ReviewsSection.tsx` -- card styling polish
+6. `src/components/layout/Header.tsx` -- remove admin from nav, polish glassmorphism
+7. `src/components/layout/Footer.tsx` -- add pre-footer CTA section
+8. `src/pages/Index.tsx` -- add WhyChooseSection, MobileOrderBar
+9. `src/pages/About.tsx` -- use shared Header, styling polish
+10. `src/pages/Contact.tsx` -- use shared Header, styling polish
+
+### No Changes To:
+- Admin pages (keep functional, not customer-facing)
+- Cart functionality
+- Database/backend
+- Checkout flow
+- WhatsApp integration logic
+
+## Performance Considerations
+- Remove unnecessary emoji animations (reduce DOM nodes)
+- Reduce ember/particle count in hero
+- Use `will-change` sparingly and only on actively animated elements
+- Keep Framer Motion `viewport={{ once: true }}` for all scroll animations
