@@ -23,6 +23,7 @@ interface Order {
   total: number;
   status: string;
   created_at: string;
+  hub_order_id: string | null;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
