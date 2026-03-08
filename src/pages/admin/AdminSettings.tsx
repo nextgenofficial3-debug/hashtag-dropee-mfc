@@ -104,7 +104,8 @@ const AdminSettings: React.FC = () => {
   };
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-  const apiEndpoint = `https://${projectId}.supabase.co/functions/v1/orders-api`;
+  const apiBaseUrl = `https://${projectId}.supabase.co/functions/v1`;
+  const apiEndpoint = `${apiBaseUrl}/orders-api`;
 
   if (isLoading) {
     return (
@@ -221,15 +222,26 @@ const AdminSettings: React.FC = () => {
                 <CardDescription>Generate API keys for delivery agent apps to receive live orders</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="p-3 rounded-lg bg-muted text-xs text-muted-foreground">
-                  <p className="font-medium text-foreground mb-1">API Endpoint:</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 break-all">{apiEndpoint}</code>
-                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => { navigator.clipboard.writeText(apiEndpoint); toast.success('Endpoint copied!'); }}>
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
+                <div className="p-3 rounded-lg bg-muted text-xs text-muted-foreground space-y-2">
+                  <div>
+                    <p className="font-medium text-foreground mb-1">API Base URL:</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 break-all">{apiBaseUrl}</code>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => { navigator.clipboard.writeText(apiBaseUrl); toast.success('Base URL copied!'); }}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <p className="mt-2">Use header: <code>Authorization: Bearer YOUR_API_KEY</code></p>
+                  <div>
+                    <p className="font-medium text-foreground mb-1">Orders Endpoint:</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 break-all">{apiEndpoint}</code>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => { navigator.clipboard.writeText(apiEndpoint); toast.success('Endpoint copied!'); }}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="mt-1">Use header: <code>Authorization: Bearer YOUR_API_KEY</code></p>
                 </div>
 
                 <div className="flex gap-2">
