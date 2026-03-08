@@ -25,12 +25,15 @@ const AdminNotifications: React.FC = () => {
   const { data: history, isLoading } = useQuery({
     queryKey: ['notification-history'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('notification_history')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;
+      return data || [];
+    },
+  });
       return data || [];
     },
   });
