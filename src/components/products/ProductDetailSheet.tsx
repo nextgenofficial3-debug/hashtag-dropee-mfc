@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Minus, X, Star } from 'lucide-react';
+import { Plus, Minus, X, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -20,6 +20,7 @@ interface ProductDetailSheetProps {
 const ProductDetailSheet: React.FC<ProductDetailSheetProps> = ({ product, open, onOpenChange }) => {
   const { items, addItem, updateQuantity } = useCart();
   const { data: promotions } = useActivePromotions();
+  const [currentImage, setCurrentImage] = useState(0);
 
   const { data: reviews } = useQuery({
     queryKey: ['product-reviews'],
@@ -27,7 +28,6 @@ const ProductDetailSheet: React.FC<ProductDetailSheetProps> = ({ product, open, 
       const { data } = await supabase
         .from('reviews')
         .select('*')
-        .eq('is_approved', true)
         .order('created_at', { ascending: false })
         .limit(5);
       return data || [];
@@ -35,6 +35,9 @@ const ProductDetailSheet: React.FC<ProductDetailSheetProps> = ({ product, open, 
   });
 
   if (!product) return null;
+
+  const images = product.images && product.images.length > 0 ? product.images : [];
+  const hasMultipleImages = images.length > 1;
 
   const cartItem = items.find(i => i.product.id === product.id);
   const quantity = cartItem?.quantity || 0;
@@ -57,20 +60,55 @@ const ProductDetailSheet: React.FC<ProductDetailSheetProps> = ({ product, open, 
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : '4.8';
 
+  const nextImage = () => setCurrentImage(prev => (prev + 1) % images.length);
+  const prevImage = () => setCurrentImage(prev => (prev - 1 + images.length) % images.length);
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setCurrentImage(0); }}>
       <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto p-0">
-        {/* Product Image */}
+        {/* Product Image Carousel */}
         <div className="relative w-full h-56 sm:h-72 bg-muted overflow-hidden">
-          {product.images?.[0] ? (
-            <img
-              src={product.images[0]}
-              alt={product.name}
-              className="h-full w-full object-cover"
-            />
+          {images.length > 0 ? (
+            <>
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={currentImage}
+                  src={images[currentImage]}
+                  alt={`${product.name} - ${currentImage + 1}`}
+                  className="h-full w-full object-cover"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                />
+              </AnimatePresence>
+
+              {hasMultipleImages && (
+                <>
+                  <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/70 backdrop-blur-sm flex items-center justify-center shadow-md">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/70 backdrop-blur-sm flex items-center justify-center shadow-md">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+
+                  {/* Dots */}
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {images.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentImage(i)}
+                        className={`h-2 rounded-full transition-all duration-300 ${i === currentImage ? 'w-5 bg-primary' : 'w-2 bg-foreground/30'}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
           ) : (
             <div className="flex h-full w-full items-center justify-center text-7xl bg-muted">🍗</div>
           )}
+
           {discountPercentage > 0 && (
             <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground text-sm font-bold shadow-lg">
               -{discountPercentage}% OFF
@@ -88,6 +126,21 @@ const ProductDetailSheet: React.FC<ProductDetailSheetProps> = ({ product, open, 
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {/* Thumbnail strip */}
+        {hasMultipleImages && (
+          <div className="flex gap-2 px-5 pt-3 overflow-x-auto scrollbar-hide">
+            {images.map((img, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentImage(i)}
+                className={`h-14 w-14 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all duration-200 ${i === currentImage ? 'border-primary ring-1 ring-primary/30' : 'border-transparent opacity-60 hover:opacity-100'}`}
+              >
+                <img src={img} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-5 space-y-4">

@@ -205,6 +205,11 @@ const AdminProducts: React.FC = () => {
                     >
                       {product.in_stock ? 'In Stock' : 'Out'}
                     </Badge>
+                    {product.images && product.images.length > 1 && (
+                      <Badge variant="secondary" className="absolute bottom-2 left-2 text-[10px]">
+                        {product.images.length} photos
+                      </Badge>
+                    )}
                   </div>
                   <CardContent className="p-4">
                     <h3 className="font-semibold line-clamp-1">{product.name}</h3>
