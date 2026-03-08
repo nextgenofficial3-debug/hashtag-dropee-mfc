@@ -13,6 +13,8 @@ export interface Product {
   category_id: string | null;
   images: string[];
   in_stock: boolean;
+  is_bestseller: boolean;
+  is_spicy: boolean;
   created_at: string;
   updated_at: string;
 }
