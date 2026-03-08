@@ -53,7 +53,7 @@ const TrackOrder: React.FC = () => {
     if (error) {
       toast.error('Failed to fetch orders');
     } else {
-      setOrders((data as Order[]) || []);
+      setOrders((data as unknown as Order[]) || []);
       if (!data || data.length === 0) toast.info('No orders found for this number');
     }
     setLoading(false);

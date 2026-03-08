@@ -42,7 +42,7 @@ const AdminCoupons: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('coupons' as any).select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      return data as Coupon[];
+      return data as unknown as Coupon[];
     },
   });
 

@@ -26,7 +26,7 @@ const Notifications: React.FC = () => {
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;
-      return data as { id: string; title: string; body: string; type: string; created_at: string }[];
+      return data as unknown as { id: string; title: string; body: string; type: string; created_at: string }[];
     },
   });
 
