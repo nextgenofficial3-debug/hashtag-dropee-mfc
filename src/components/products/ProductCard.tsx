@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Minus, Star } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Product, Category } from '@/types/database';
@@ -42,15 +42,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ delay: index * 0.05, duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
+        transition={{ delay: index * 0.04, duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
         onClick={() => setDetailOpen(true)}
-        className="group relative flex flex-row md:flex-col rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm hover:shadow-lg hover:border-border/80 transition-all duration-300 cursor-pointer active:scale-[0.98]"
+        className="group relative flex flex-col rounded-2xl bg-card border border-border/30 overflow-hidden shadow-sm hover:shadow-xl hover:border-border/60 transition-all duration-300 cursor-pointer active:scale-[0.98]"
       >
         {/* Image */}
-        <div className="relative w-32 h-32 md:w-full md:h-48 flex-shrink-0 overflow-hidden bg-muted">
+        <div className="relative w-full aspect-[4/3] overflow-hidden bg-muted">
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -59,50 +59,50 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
               loading="lazy"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-4xl md:text-5xl select-none bg-muted">
+            <div className="flex h-full w-full items-center justify-center text-5xl select-none bg-muted">
               🍗
             </div>
           )}
 
+          {/* Gradient overlay at bottom */}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
+
           {discountPercentage > 0 && (
-            <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-bold shadow-md">
+            <Badge className="absolute top-2.5 left-2.5 bg-primary text-primary-foreground text-[11px] font-bold shadow-md px-2 py-0.5">
               -{discountPercentage}%
             </Badge>
           )}
 
           {!product.in_stock && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm">
               <Badge variant="destructive" className="text-xs">Out of Stock</Badge>
             </div>
           )}
         </div>
 
         {/* Content */}
-        <div className="flex flex-col flex-1 p-3 md:p-4 justify-between min-w-0">
-          <div>
-            {product.category && (
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-gold">
-                {product.category.name}
-              </span>
-            )}
-            <h3 className="font-bold text-sm md:text-base leading-tight line-clamp-1 mt-0.5">
-              {product.name}
-            </h3>
-            {product.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                {product.description}
-              </p>
-            )}
-            <p className="text-[10px] text-muted-foreground/60 mt-1 md:hidden">Tap for details</p>
-          </div>
+        <div className="flex flex-col flex-1 p-3.5 gap-1.5">
+          {product.category && (
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-gold">
+              {product.category.name}
+            </span>
+          )}
+          <h3 className="font-bold text-sm leading-snug line-clamp-1">
+            {product.name}
+          </h3>
+          {product.description && (
+            <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+              {product.description}
+            </p>
+          )}
 
-          <div className="flex items-center justify-between mt-2 gap-2">
+          <div className="flex items-center justify-between mt-auto pt-2">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-base md:text-lg font-black text-gold">
+              <span className="text-lg font-black text-gold">
                 ₹{discountedPrice.toFixed(0)}
               </span>
               {discountPercentage > 0 && (
-                <span className="text-xs text-muted-foreground line-through">
+                <span className="text-[11px] text-muted-foreground line-through">
                   ₹{product.price.toFixed(0)}
                 </span>
               )}
@@ -110,12 +110,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
 
             <AnimatePresence mode="wait">
               {quantity === 0 ? (
-                <motion.div key="add" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} transition={{ duration: 0.2 }}>
+                <motion.div key="add" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} transition={{ duration: 0.15 }}>
                   <Button
                     size="sm"
                     onClick={handleAdd}
                     disabled={!product.in_stock}
-                    className="h-8 px-4 text-xs font-bold uppercase tracking-wide rounded-lg shadow-md"
+                    className="h-8 px-5 text-[11px] font-bold uppercase tracking-wide rounded-lg shadow-md"
                     style={{
                       background: 'linear-gradient(135deg, hsl(var(--brand-gold)) 0%, hsl(35 80% 48%) 100%)',
                       color: 'hsl(0 0% 5%)',
@@ -125,8 +125,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
                   </Button>
                 </motion.div>
               ) : (
-                <motion.div key="stepper" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} transition={{ duration: 0.2 }}
-                  className="flex items-center gap-0 rounded-lg border border-border overflow-hidden shadow-sm"
+                <motion.div key="stepper" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} transition={{ duration: 0.15 }}
+                  className="flex items-center rounded-lg border border-border overflow-hidden shadow-sm"
                 >
                   <button onClick={handleDecrement} className="h-8 w-8 flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground">
                     <Minus className="h-3.5 w-3.5" />

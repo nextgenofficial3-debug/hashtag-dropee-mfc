@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, X, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Product, Category } from '@/types/database';
 import { useCart } from '@/contexts/CartContext';
 import { useActivePromotions } from '@/hooks/usePromotions';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 
 interface ProductDetailSheetProps {
   product: (Product & { category?: Category | null }) | null;
@@ -65,7 +66,11 @@ const ProductDetailSheet: React.FC<ProductDetailSheetProps> = ({ product, open, 
 
   return (
     <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setCurrentImage(0); }}>
-      <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto p-0">
+      <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto p-0" hideClose>
+        <VisuallyHidden.Root>
+          <SheetTitle>{product.name}</SheetTitle>
+        </VisuallyHidden.Root>
+
         {/* Product Image Carousel */}
         <div className="relative w-full h-56 sm:h-72 bg-muted overflow-hidden">
           {images.length > 0 ? (
