@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ShoppingCart, Menu, Phone, Bell, BellOff } from 'lucide-react';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { ShoppingCart, Menu, Phone, Bell } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -9,25 +8,6 @@ import { useCart } from '@/contexts/CartContext';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-
-const NotificationBell: React.FC = () => {
-  const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications();
-  if (!isSupported) return null;
-  return (
-    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.45 }}>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={isSubscribed ? unsubscribe : subscribe}
-        disabled={isLoading}
-        className="relative"
-        title={isSubscribed ? 'Disable notifications' : 'Enable notifications'}
-      >
-        {isSubscribed ? <Bell className="h-5 w-5 text-primary" /> : <BellOff className="h-5 w-5 text-muted-foreground" />}
-      </Button>
-    </motion.div>
-  );
-};
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -39,10 +19,12 @@ const Header: React.FC = () => {
   const headerOpacity = useTransform(scrollY, [0, 100], [0.6, 0.92]);
   const headerBlur = useTransform(scrollY, [0, 100], [12, 24]);
 
-  const isStorePage = location.pathname === '/';
+  const isStorePage = location.pathname === '/' || location.pathname === '/shop';
 
   const navLinks = [
-    { href: '/', label: 'Menu' },
+    { href: '/', label: 'Home' },
+    { href: '/shop', label: 'Shop' },
+    { href: '/track-order', label: 'Track Order' },
     { href: '/about', label: 'About' },
     { href: '/contact', label: 'Contact' },
   ];
@@ -75,7 +57,7 @@ const Header: React.FC = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-6 md:flex">
           {navLinks.map((link, index) => (
             <motion.div
               key={link.href}
@@ -103,7 +85,15 @@ const Header: React.FC = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <NotificationBell />
+          {/* Notification bell - links to /notifications */}
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.45 }}>
+            <Link to="/notifications">
+              <Button variant="ghost" size="icon" className="relative" title="Notifications">
+                <Bell className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            </Link>
+          </motion.div>
+
           {settings && (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }}>
               <Badge variant={settings.is_open ? "default" : "destructive"} className="hidden sm:flex shadow-sm text-xs">
@@ -151,7 +141,10 @@ const Header: React.FC = () => {
                     <Link to={link.href} onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium transition-colors hover:text-primary block py-2">{link.label}</Link>
                   </motion.div>
                 ))}
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}>
+                  <Link to="/notifications" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium transition-colors hover:text-primary block py-2">Notifications</Link>
+                </motion.div>
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }}>
                   <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium transition-colors hover:text-primary block py-2 text-muted-foreground">Admin</Link>
                 </motion.div>
               </nav>
