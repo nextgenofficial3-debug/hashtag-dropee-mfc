@@ -365,6 +365,7 @@ const AdminProducts: React.FC = () => {
                   />
                 </div>
 
+                <div className="sm:col-span-2">
                   <Label>Product Images</Label>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {/* Existing images */}
