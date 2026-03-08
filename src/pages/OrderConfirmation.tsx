@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Check, MessageCircle, ArrowLeft, Clock, Share2 } from 'lucide-react';
+import { Check, MessageCircle, ArrowLeft, Clock, Share2, MapPin, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -106,6 +106,26 @@ const OrderConfirmation: React.FC = () => {
             </motion.div>
           </div>
 
+          {/* Delivery info card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.85 }}
+            className="mb-4"
+          >
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full flex items-center justify-center bg-primary/10">
+                  <Truck className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Delivered by Hashtag Dropee</p>
+                  <p className="text-xs text-muted-foreground">Your order will be delivered to your doorstep</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
           {/* Order details */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -152,6 +172,15 @@ const OrderConfirmation: React.FC = () => {
               onClick={() => window.open(order.whatsappLink, '_blank')}
             >
               <MessageCircle className="mr-2 h-5 w-5" /> Track on WhatsApp
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={() => navigate('/track-order')}
+            >
+              <MapPin className="mr-2 h-4 w-4" /> Track Your Order
             </Button>
 
             <div className="flex gap-3">

@@ -13,6 +13,7 @@ import {
   FileText,
   Star,
   Bell,
+  Ticket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -27,6 +28,7 @@ const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/promotions', label: 'Promotions', icon: Tag },
+  { href: '/admin/coupons', label: 'Coupons', icon: Ticket },
   { href: '/admin/orders', label: 'Orders', icon: Package },
   { href: '/admin/notifications', label: 'Notifications', icon: Bell },
   { href: '/admin/reviews', label: 'Reviews', icon: Star },

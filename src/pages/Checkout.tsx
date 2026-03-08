@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CreditCard, Truck, Copy, Check, ExternalLink, Package, Minus, Plus, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CreditCard, Truck, Copy, Check, ExternalLink, Package, Minus, Plus, ShoppingBag, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +43,10 @@ const Checkout: React.FC = () => {
   });
   const [deliveryKm, setDeliveryKm] = useState<number>(0);
   const [copied, setCopied] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   const calculateDiscount = () => {
     let totalDiscount = 0;
@@ -58,7 +62,7 @@ const Checkout: React.FC = () => {
   const discountAmount = calculateDiscount();
   const deliveryKmFee = deliveryKm * DELIVERY_PER_KM;
   const totalDelivery = DELIVERY_BASE_FEE + deliveryKmFee;
-  const grandTotal = subtotal - discountAmount + PACKAGING_FEE + totalDelivery;
+  const grandTotal = subtotal - discountAmount - couponDiscount + PACKAGING_FEE + totalDelivery;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -71,6 +75,52 @@ const Checkout: React.FC = () => {
       toast.success('UPI ID copied!');
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase
+        .from('coupons' as any)
+        .select('*')
+        .eq('code', couponCode.toUpperCase().trim())
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        toast.error('Invalid or expired coupon code');
+        setCouponLoading(false);
+        return;
+      }
+
+      const coupon = data as any;
+      if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
+        toast.error('This coupon has reached its usage limit');
+        setCouponLoading(false);
+        return;
+      }
+      if (coupon.min_order_amount && subtotal < coupon.min_order_amount) {
+        toast.error(`Minimum order amount is ₹${coupon.min_order_amount}`);
+        setCouponLoading(false);
+        return;
+      }
+
+      const discount = coupon.discount_type === 'percentage'
+        ? (subtotal * coupon.discount_value) / 100
+        : coupon.discount_value;
+
+      setCouponDiscount(Math.min(discount, subtotal));
+      setCouponApplied(true);
+      toast.success(`Coupon applied! ₹${Math.min(discount, subtotal).toFixed(0)} off`);
+
+      // Increment used_count
+      await supabase.from('coupons' as any).update({ used_count: (coupon.used_count || 0) + 1 }).eq('id', coupon.id);
+    } catch {
+      toast.error('Failed to apply coupon');
+    }
+    setCouponLoading(false);
   };
 
   const goTo = (newStep: number) => {
@@ -231,6 +281,34 @@ const Checkout: React.FC = () => {
                     <span className="text-muted-foreground">Subtotal ({items.length} items)</span>
                     <span className="font-bold">₹{subtotal.toFixed(0)}</span>
                   </div>
+
+                  {/* Coupon Code */}
+                  <div className="flex gap-2 mt-3">
+                    <div className="relative flex-1">
+                      <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Coupon code"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        disabled={couponApplied}
+                        className="pl-9 uppercase"
+                      />
+                    </div>
+                    {couponApplied ? (
+                      <Button variant="outline" size="sm" onClick={() => { setCouponApplied(false); setCouponDiscount(0); setCouponCode(''); }}>
+                        Remove
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={applyCoupon} disabled={couponLoading || !couponCode.trim()}>
+                        Apply
+                      </Button>
+                    )}
+                  </div>
+                  {couponApplied && (
+                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-green-500 flex items-center gap-1">
+                      <Check className="h-3 w-3" /> Coupon applied: -₹{couponDiscount.toFixed(0)}
+                    </motion.p>
+                  )}
                 </div>
               )}
 
@@ -336,6 +414,12 @@ const Checkout: React.FC = () => {
                           <div className="flex justify-between text-green-500">
                             <span>Discount</span>
                             <span>-₹{discountAmount.toFixed(0)}</span>
+                          </div>
+                        )}
+                        {couponDiscount > 0 && (
+                          <div className="flex justify-between text-green-500">
+                            <span>Coupon ({couponCode})</span>
+                            <span>-₹{couponDiscount.toFixed(0)}</span>
                           </div>
                         )}
                         <div className="flex justify-between">

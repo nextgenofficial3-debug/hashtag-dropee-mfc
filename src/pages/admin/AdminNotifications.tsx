@@ -56,14 +56,18 @@ const AdminNotifications: React.FC = () => {
     try {
       const result = await sendNotification(title, body);
 
-      // Log to history
+      // Log to history + user_notifications for in-app viewing
       const { data: { session } } = await supabase.auth.getSession();
-      await (supabase as any).from('notification_history').insert({
-        title,
-        body,
-        sent_by: session?.user?.id || null,
-        sent_count: result?.sent || 0,
-      });
+      await Promise.all([
+        (supabase as any).from('notification_history').insert({
+          title, body,
+          sent_by: session?.user?.id || null,
+          sent_count: result?.sent || 0,
+        }),
+        (supabase as any).from('user_notifications').insert({
+          title, body, type: 'promo',
+        }),
+      ]);
 
       queryClient.invalidateQueries({ queryKey: ['notification-history'] });
       setTitle('');
