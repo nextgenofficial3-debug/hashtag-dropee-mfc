@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
-const APK_DOWNLOAD_URL = 'https://mfc.discoverukhrul.com/mfc-app.apk';
+const APK_DOWNLOAD_URL = '/MFC.apk';
 
 const Install: React.FC = () => {
   const navigate = useNavigate();
