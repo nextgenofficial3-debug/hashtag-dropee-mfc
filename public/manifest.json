@@ -8,6 +8,38 @@
   "background_color": "#0a0a0a",
   "theme_color": "#8B1A1A",
   "orientation": "portrait",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["food", "shopping"],
+  "screenshots": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "MFC Home"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "MFC Mobile"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Order Now",
+      "url": "/#menu",
+      "icons": [{ "src": "/icon-512.png", "sizes": "512x512" }]
+    },
+    {
+      "name": "Contact Us",
+      "url": "/contact",
+      "icons": [{ "src": "/icon-512.png", "sizes": "512x512" }]
+    }
+  ],
   "icons": [
     {
       "src": "/favicon.ico",
