@@ -77,6 +77,52 @@ const Checkout: React.FC = () => {
     }
   };
 
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase
+        .from('coupons' as any)
+        .select('*')
+        .eq('code', couponCode.toUpperCase().trim())
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        toast.error('Invalid or expired coupon code');
+        setCouponLoading(false);
+        return;
+      }
+
+      const coupon = data as any;
+      if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
+        toast.error('This coupon has reached its usage limit');
+        setCouponLoading(false);
+        return;
+      }
+      if (coupon.min_order_amount && subtotal < coupon.min_order_amount) {
+        toast.error(`Minimum order amount is ₹${coupon.min_order_amount}`);
+        setCouponLoading(false);
+        return;
+      }
+
+      const discount = coupon.discount_type === 'percentage'
+        ? (subtotal * coupon.discount_value) / 100
+        : coupon.discount_value;
+
+      setCouponDiscount(Math.min(discount, subtotal));
+      setCouponApplied(true);
+      toast.success(`Coupon applied! ₹${Math.min(discount, subtotal).toFixed(0)} off`);
+
+      // Increment used_count
+      await supabase.from('coupons' as any).update({ used_count: (coupon.used_count || 0) + 1 }).eq('id', coupon.id);
+    } catch {
+      toast.error('Failed to apply coupon');
+    }
+    setCouponLoading(false);
+  };
+
   const goTo = (newStep: number) => {
     setDirection(newStep > step ? 1 : -1);
     setStep(newStep);
