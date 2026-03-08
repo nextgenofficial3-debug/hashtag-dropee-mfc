@@ -58,6 +58,8 @@ const AdminProducts: React.FC = () => {
     price: '',
     category_id: '',
     in_stock: true,
+    is_bestseller: false,
+    is_spicy: false,
     images: [] as string[],
   });
   const [imageFiles, setImageFiles] = useState<File[]>([]);

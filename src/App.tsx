@@ -44,6 +44,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/install" element={<Install />} />
+              <Route path="/order-confirmation" element={<OrderConfirmation />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLogin />} />
