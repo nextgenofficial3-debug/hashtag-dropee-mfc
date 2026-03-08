@@ -58,6 +58,8 @@ const AdminProducts: React.FC = () => {
     price: '',
     category_id: '',
     in_stock: true,
+    is_bestseller: false,
+    is_spicy: false,
     images: [] as string[],
   });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -73,6 +75,8 @@ const AdminProducts: React.FC = () => {
       price: '',
       category_id: '',
       in_stock: true,
+      is_bestseller: false,
+      is_spicy: false,
       images: [],
     });
     setImageFiles([]);
@@ -92,6 +96,8 @@ const AdminProducts: React.FC = () => {
       price: product.price.toString(),
       category_id: product.category_id || '',
       in_stock: product.in_stock,
+      is_bestseller: (product as any).is_bestseller || false,
+      is_spicy: (product as any).is_spicy || false,
       images: product.images || [],
     });
     setIsDialogOpen(true);
@@ -128,6 +134,8 @@ const AdminProducts: React.FC = () => {
       price: parseFloat(formData.price),
       category_id: formData.category_id || null,
       in_stock: formData.in_stock,
+      is_bestseller: formData.is_bestseller,
+      is_spicy: formData.is_spicy,
       images: [...formData.images, ...uploadedUrls],
     };
 
@@ -330,6 +338,30 @@ const AdminProducts: React.FC = () => {
                     id="in_stock"
                     checked={formData.in_stock}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, in_stock: checked }))}
+                  />
+                </div>
+
+                <div className="sm:col-span-2 flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <Label htmlFor="is_bestseller">Best Seller</Label>
+                    <p className="text-sm text-muted-foreground">Show a "Best Seller" badge</p>
+                  </div>
+                  <Switch
+                    id="is_bestseller"
+                    checked={formData.is_bestseller}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_bestseller: checked }))}
+                  />
+                </div>
+
+                <div className="sm:col-span-2 flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <Label htmlFor="is_spicy">Spicy</Label>
+                    <p className="text-sm text-muted-foreground">Show a "🌶 Spicy" badge</p>
+                  </div>
+                  <Switch
+                    id="is_spicy"
+                    checked={formData.is_spicy}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_spicy: checked }))}
                   />
                 </div>
 

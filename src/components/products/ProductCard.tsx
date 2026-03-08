@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Flame, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Product, Category } from '@/types/database';
@@ -9,9 +9,14 @@ import { useActivePromotions } from '@/hooks/usePromotions';
 import ProductDetailSheet from './ProductDetailSheet';
 
 interface ProductCardProps {
-  product: Product & { category?: Category | null };
+  product: Product & { category?: Category | null; is_bestseller?: boolean; is_spicy?: boolean };
   index?: number;
 }
+
+const isNew = (createdAt: string) => {
+  const diff = Date.now() - new Date(createdAt).getTime();
+  return diff < 7 * 24 * 60 * 60 * 1000;
+};
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
   const { items, addItem, updateQuantity } = useCart();
@@ -38,6 +43,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
   };
 
   const imageUrl = product.images?.[0];
+  const productIsNew = isNew(product.created_at);
+  const isBestseller = (product as any).is_bestseller;
+  const isSpicy = (product as any).is_spicy;
 
   return (
     <>
@@ -67,11 +75,47 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
           {/* Gradient overlay at bottom */}
           <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
 
-          {discountPercentage > 0 && (
-            <Badge className="absolute top-2.5 left-2.5 bg-primary text-primary-foreground text-[11px] font-bold shadow-md px-2 py-0.5">
-              -{discountPercentage}%
-            </Badge>
-          )}
+          {/* Badges - top left stack */}
+          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
+            {discountPercentage > 0 && (
+              <Badge className="bg-primary text-primary-foreground text-[11px] font-bold shadow-md px-2 py-0.5">
+                -{discountPercentage}%
+              </Badge>
+            )}
+            {productIsNew && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+              >
+                <Badge className="bg-gold text-background text-[10px] font-bold shadow-md px-2 py-0.5 animate-pulse-glow flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" /> NEW
+                </Badge>
+              </motion.div>
+            )}
+            {isBestseller && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3, type: 'spring', stiffness: 300 }}
+              >
+                <Badge className="text-[10px] font-bold shadow-md px-2 py-0.5 flex items-center gap-1" style={{ background: 'hsl(0 70% 35%)', color: 'white' }}>
+                  <Flame className="h-3 w-3" /> BEST SELLER
+                </Badge>
+              </motion.div>
+            )}
+            {isSpicy && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.35, type: 'spring', stiffness: 300 }}
+              >
+                <Badge className="text-[10px] font-bold shadow-md px-2 py-0.5" style={{ background: 'hsl(15 80% 50%)', color: 'white' }}>
+                  🌶 SPICY
+                </Badge>
+              </motion.div>
+            )}
+          </div>
 
           {!product.in_stock && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm">

@@ -12,6 +12,7 @@ import Checkout from "./pages/Checkout";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Install from "./pages/Install";
+import OrderConfirmation from "./pages/OrderConfirmation";
 import NotFound from "./pages/NotFound";
 
 // Admin Pages
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/install" element={<Install />} />
+              <Route path="/order-confirmation" element={<OrderConfirmation />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLogin />} />
