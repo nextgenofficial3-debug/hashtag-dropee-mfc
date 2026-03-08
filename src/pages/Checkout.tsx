@@ -140,19 +140,52 @@ const Checkout: React.FC = () => {
       return;
     }
 
+    let orderId = '';
+    let hubOrderId = '';
+
     try {
       const { supabase } = await import('@/integrations/supabase/client');
-      await supabase.from('orders').insert({
+      const orderItems = items.map(i => ({ name: i.product.name, quantity: i.quantity, price: i.product.price }));
+      
+      const { data: insertedOrder, error: insertError } = await supabase.from('orders').insert({
         customer_name: formData.name,
         customer_phone: formData.phone,
         customer_address: formData.address,
         special_instructions: formData.instructions || null,
         payment_method: formData.paymentMethod,
-        items: items.map(i => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })),
+        items: orderItems,
         subtotal,
         discount: discountAmount,
         total: grandTotal,
-      });
+      }).select('id').single();
+
+      if (insertError) {
+        console.error('Failed to save order:', insertError);
+      } else {
+        orderId = insertedOrder.id;
+      }
+
+      // Forward order to hub
+      if (orderId) {
+        try {
+          const { data: hubData } = await supabase.functions.invoke('forward-order-to-hub', {
+            body: {
+              orderId,
+              customerName: formData.name,
+              customerPhone: formData.phone,
+              customerAddress: formData.address,
+              items: orderItems,
+              total: grandTotal,
+              specialInstructions: formData.instructions || '',
+            },
+          });
+          if (hubData?.hub_order_id) {
+            hubOrderId = hubData.hub_order_id;
+          }
+        } catch (hubErr) {
+          console.error('Failed to forward to hub:', hubErr);
+        }
+      }
     } catch (err) {
       console.error('Failed to save order:', err);
     }
@@ -168,6 +201,8 @@ const Checkout: React.FC = () => {
       subtotal, discount: discountAmount, total: grandTotal,
       paymentMethod: formData.paymentMethod,
       whatsappLink,
+      orderId,
+      hubOrderId,
     };
 
     clearCart();

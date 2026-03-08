@@ -1,83 +1,114 @@
 
+# MFC Premium 2026 Redesign
 
-## Plan: Central Order Hub Integration
+## Overview
+A comprehensive visual and UX overhaul of the MFC website to transform it from a basic local restaurant page into a bold, high-converting, premium fast-food brand experience. All existing functionality (cart, admin, reviews, WhatsApp, open/close status) will be preserved.
 
-Since you don't have the Hub URL and API Key yet, I'll build the full integration structure using configurable secrets. When you're ready, you'll just provide the two values and everything will work.
+## Color & Typography Upgrade
 
----
+**Updated Palette:**
+- Background: `#0a0a0a` (near-black) with warm undertones
+- Primary: `#8B1A1A` (deep crimson) -- kept
+- Gold accent: `#D4A853` (warm gold for CTAs and highlights)
+- Card surfaces: `#141414` with subtle warm tint
+- Text: `#F5F0EB` (warm white, not pure white)
 
-### 1. Store Hub Credentials as Secrets
+**Font:** Keep Inter/Sora but enforce heavier weights (700-900 for headlines, 400-500 for body).
 
-Two secrets will be needed (requested via the secrets tool when implementing):
-- `ORDER_HUB_URL` — your hub's base URL
-- `ORDER_HUB_API_KEY` — your cafe API key from the hub admin
+## Section-by-Section Changes
 
-### 2. Edge Function: `forward-order-to-hub`
+### 1. Hero Section (HeroSection.tsx) -- Full Rebuild
+- Replace emoji-based hero with a bold typographic layout
+- New headline: **"Ukhrul's Crispiest Fried Chicken"** with word-by-word animated reveal
+- Subheadline: "Handcrafted daily. Loved by thousands."
+- Three CTA buttons in a row: **Order Now** (gold, primary), **Get Directions** (outline), **Call Now** (green)
+- Animated stats strip below CTAs: "2000+ Customers Served", "5+ Years", "4.8 Rating"
+- Remove floating food emojis; replace with subtle radial gradient pulses and a warm golden light bloom
+- Keep open/close badge and promo badge
 
-**New file:** `supabase/functions/forward-order-to-hub/index.ts`
+### 2. "Why Choose MFC" Section (NEW component: WhyChooseSection.tsx)
+- 4 value blocks in a grid with icons:
+  - "Secret Spice Blend" (Flame icon)
+  - "Fresh, Never Frozen" (Snowflake icon)
+  - "Fast & Hot Delivery" (Truck icon)
+  - "Family Recipe Since Day 1" (Heart icon)
+- Glassmorphism cards with warm border glow on hover
+- Scroll-triggered fade-up entrance
 
-- Receives the local order data (order ID, customer info, items, total, notes)
-- POSTs to `{ORDER_HUB_URL}/api/orders` with header `x-api-key: {ORDER_HUB_API_KEY}`
-- Body includes: `source: "cafe"`, order ID, customer name/phone/address, items array, total, special notes
-- Returns the `hub_order_id` from the hub's response
+### 3. Menu Section (ProductGrid.tsx + ProductCard.tsx) -- Visual Upgrade
+- Section title: "Our Best Sellers" with gold accent underline
+- Product cards: darker card background (`#141414`), larger image area, golden price tag styling
+- Hover effect: warm golden border glow instead of orange, subtle upward lift
+- "Add to Cart" button uses gold accent on hover
+- Remove ember spark animations (too busy), keep oil-shine sweep
 
-### 3. Edge Function: `check-hub-order-status`
+### 4. Reviews Section (ReviewsSection.tsx) -- Polish
+- Keep existing functionality
+- Upgrade card styling: add subtle gold star glow, darker card backgrounds
+- Add quote marks decoration to review text
 
-**New file:** `supabase/functions/check-hub-order-status/index.ts`
+### 5. Footer (Footer.tsx) -- Conversion-Focused Rebuild
+- Add a bold pre-footer CTA section: "Ready to Order?" with gold "Order Now" button and "Call Now" secondary
+- Add location text: "Viewland Zone II, Ukhrul"
+- Keep existing contact info and hours grid
+- Add subtle gold divider line
 
-- GET endpoint that proxies `{ORDER_HUB_URL}/api/orders/{hub_order_id}` with the API key header
-- Used as WebSocket fallback (polling every 15s)
+### 6. About Page (About.tsx) -- Typography & Layout Polish
+- Use shared Header component instead of standalone back button
+- Upgrade heading to use gold gradient text
+- Add animated counter section (Years, Customers, Menu Items)
 
-### 4. Database Migration
+### 7. Contact Page (Contact.tsx) -- Same Treatment
+- Use shared Header
+- Upgrade card hover effects to match new gold accent system
 
-Add `hub_order_id` column to the `orders` table:
-```sql
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS hub_order_id text;
-```
+### 8. Sticky Mobile Order Bar (NEW: MobileOrderBar.tsx)
+- Fixed bottom bar on mobile only (below md breakpoint)
+- Shows: "Order Now" button (gold), Phone icon, WhatsApp icon
+- Appears after scrolling past hero section
+- Glassmorphism background
 
-### 5. Checkout Flow Update (`src/pages/Checkout.tsx`)
+### 9. Header (Header.tsx) -- Minor Polish
+- Add gold accent to logo glow instead of crimson-only
+- Remove "Admin" link from public nav (keep at /admin URL, just not in nav)
+- Improve glassmorphism opacity values for better readability
 
-In `handleSubmit`:
-1. Insert order into local DB (existing) — capture the returned order `id`
-2. Call `forward-order-to-hub` edge function with order details
-3. Update the local order record with the returned `hub_order_id`
-4. Pass `hub_order_id` and `orderId` to the confirmation page via navigation state
+### 10. Loading Screen (CinematicLoader.tsx) -- Keep As-Is
+- Already has premium feel, no changes needed
 
-### 6. Order Confirmation Page Redesign (`src/pages/OrderConfirmation.tsx`)
+## CSS Updates (index.css)
+- Add `--brand-gold` as usable accent throughout
+- Add `.shadow-gold-glow` utility
+- Refine card surface colors for warmer dark tones
+- Add `.text-warm-white` utility class
 
-Replace the static confirmation with a **live order tracker**:
+## Technical Details
 
-**Status steps:** Pending → Confirmed → Preparing → Picked Up → On The Way → Delivered
+### Files to Create:
+1. `src/components/home/WhyChooseSection.tsx` -- 4-block value proposition grid
+2. `src/components/common/MobileOrderBar.tsx` -- sticky bottom CTA bar for mobile
 
-**Real-time connection:**
-- On mount, connect WebSocket to `{HUB_URL}` with `source=cafe` and API key as connection params
-- Listen for status update messages; extract `hub_order_id` + new status
-- Animate the tracker to the new step using Framer Motion
+### Files to Modify:
+1. `src/index.css` -- updated CSS variables, new utility classes
+2. `src/components/home/HeroSection.tsx` -- full visual rebuild (same data hooks)
+3. `src/components/products/ProductCard.tsx` -- styling upgrades, gold accents
+4. `src/components/products/ProductGrid.tsx` -- section title upgrade
+5. `src/components/home/ReviewsSection.tsx` -- card styling polish
+6. `src/components/layout/Header.tsx` -- remove admin from nav, polish glassmorphism
+7. `src/components/layout/Footer.tsx` -- add pre-footer CTA section
+8. `src/pages/Index.tsx` -- add WhyChooseSection, MobileOrderBar
+9. `src/pages/About.tsx` -- use shared Header, styling polish
+10. `src/pages/Contact.tsx` -- use shared Header, styling polish
 
-**Fallback polling:**
-- If WebSocket disconnects, fall back to calling `check-hub-order-status` edge function every 15 seconds
-- Auto-reconnect WebSocket with exponential backoff
+### No Changes To:
+- Admin pages (keep functional, not customer-facing)
+- Cart functionality
+- Database/backend
+- Checkout flow
+- WhatsApp integration logic
 
-**Tracker UI:**
-- Horizontal/vertical stepper showing all 6 statuses
-- Current step highlighted with animated pulse
-- Completed steps show green checkmarks
-- Smooth animation between steps
-
-### 7. No Delivery Logic
-
-Per Rule 4, no agent management, routing, or delivery tracking code. The site only sends orders and displays status from the hub.
-
----
-
-### Summary of Changes
-
-| File | Action |
-|------|--------|
-| `supabase/functions/forward-order-to-hub/index.ts` | **New** — POST order to hub |
-| `supabase/functions/check-hub-order-status/index.ts` | **New** — GET order status fallback |
-| DB migration | Add `hub_order_id` to `orders` table |
-| `src/pages/Checkout.tsx` | Call hub after local insert, pass hub ID to confirmation |
-| `src/pages/OrderConfirmation.tsx` | Add live tracker with WebSocket + polling fallback |
-| Secrets | `ORDER_HUB_URL` and `ORDER_HUB_API_KEY` (prompted during implementation) |
-
+## Performance Considerations
+- Remove unnecessary emoji animations (reduce DOM nodes)
+- Reduce ember/particle count in hero
+- Use `will-change` sparingly and only on actively animated elements
+- Keep Framer Motion `viewport={{ once: true }}` for all scroll animations
