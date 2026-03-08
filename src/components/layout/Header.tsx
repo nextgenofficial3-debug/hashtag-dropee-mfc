@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ShoppingCart, Menu, Phone } from 'lucide-react';
+import { ShoppingCart, Menu, Phone, Bell, BellOff } from 'lucide-react';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
