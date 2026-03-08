@@ -1,1 +1,13 @@
 project_id = "jwflhzyqcmwmehnhvbwf"
+
+[functions.orders-api]
+verify_jwt = false
+
+[functions.create-admin]
+verify_jwt = false
+
+[functions.push-subscribe]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false

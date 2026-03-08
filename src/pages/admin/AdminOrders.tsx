@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Package, Clock, Truck, CheckCircle, RefreshCw } from 'lucide-react';
+import { Package, Clock, Truck, CheckCircle, RefreshCw, Bell } from 'lucide-react';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,10 +61,21 @@ const AdminOrders: React.FC = () => {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  const { sendNotification } = usePushNotifications();
+
   const updateStatus = async (orderId: string, newStatus: string) => {
     const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
-    if (error) toast.error('Failed to update');
-    else toast.success(`Order marked as ${newStatus}`);
+    if (error) {
+      toast.error('Failed to update');
+    } else {
+      toast.success(`Order marked as ${newStatus}`);
+      const statusLabel = statusConfig[newStatus]?.label || newStatus;
+      await sendNotification(
+        'Order Update 🍗',
+        `Your order #${orderId.slice(0, 8).toUpperCase()} is now: ${statusLabel}`,
+        orderId
+      );
+    }
   };
 
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
