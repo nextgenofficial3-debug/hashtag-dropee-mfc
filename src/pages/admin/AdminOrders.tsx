@@ -136,7 +136,7 @@ const AdminOrders: React.FC = () => {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid gap-4 md:grid-cols-3">
+                      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                         <div>
                           <p className="text-sm font-medium">{order.customer_name}</p>
                           <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
@@ -155,12 +155,12 @@ const AdminOrders: React.FC = () => {
                           <p className="text-sm font-bold mt-2 text-gold">Total: ₹{order.total}</p>
                           <p className="text-xs text-muted-foreground">Payment: {order.payment_method}</p>
                         </div>
-                        <div className="flex items-end md:justify-end">
+                        <div className="flex items-end">
                           <Select
                             value={order.status}
                             onValueChange={(val) => updateStatus(order.id, val)}
                           >
-                            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="w-full md:w-[180px]"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="pending">Pending</SelectItem>
                               <SelectItem value="preparing">Preparing</SelectItem>

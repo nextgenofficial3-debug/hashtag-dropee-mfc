@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Send, CheckCircle, Quote } from 'lucide-react';
+import { Star, Send, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -69,29 +68,21 @@ const ReviewCard: React.FC<{ review: Review; index: number }> = ({ review, index
     initial={{ opacity: 0, y: 30 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
-    transition={{ delay: index * 0.1, duration: 0.6, ease: [0.19, 1, 0.22, 1] }}
+    transition={{ delay: index * 0.08, duration: 0.6, ease: [0.19, 1, 0.22, 1] }}
     whileHover={{ y: -4 }}
-    className="rounded-xl border border-border/50 bg-card p-6 transition-all duration-500 min-w-[300px] max-w-[380px] flex-shrink-0 hover:border-[hsl(var(--brand-gold)/0.2)]"
+    className="rounded-xl border border-border/50 bg-card p-5 sm:p-6 transition-all duration-500 w-[85vw] sm:w-[320px] md:min-w-[300px] md:max-w-[380px] flex-shrink-0 snap-center hover:border-[hsl(var(--brand-gold)/0.2)]"
     style={{
       boxShadow: '0 4px 20px -4px hsl(0 0% 0% / 0.3)',
     }}
   >
-    {/* Quote decoration */}
-    <Quote className="h-6 w-6 text-gold/20 mb-3" />
-
+    <Quote className="h-5 w-5 text-gold/20 mb-2" />
     <p className="text-sm text-muted-foreground leading-relaxed mb-4 italic">&ldquo;{review.review_text}&rdquo;</p>
-
     <div className="flex items-center gap-3">
       <div className={`flex h-9 w-9 items-center justify-center rounded-full text-white text-xs font-bold ${getAvatarColor(review.customer_name)}`}>
         {getInitials(review.customer_name)}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h4 className="font-semibold text-sm truncate">{review.customer_name}</h4>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500/30 text-green-600 shrink-0">
-            <CheckCircle className="h-2.5 w-2.5 mr-0.5" /> Verified
-          </Badge>
-        </div>
+        <h4 className="font-semibold text-sm truncate">{review.customer_name}</h4>
         <div className="flex items-center gap-2 mt-0.5">
           <StarRating rating={review.rating} size="h-3 w-3" />
           <span className="text-[11px] text-muted-foreground/40">{new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
@@ -115,7 +106,6 @@ const ReviewsSection: React.FC = () => {
       const { data, error } = await supabase
         .from('reviews')
         .select('*')
-        .eq('is_approved', true)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
@@ -141,7 +131,7 @@ const ReviewsSection: React.FC = () => {
         review_text: reviewText.trim(),
       });
       if (error) throw error;
-      toast({ title: `Thanks ${name.trim()}! 🍗`, description: 'Your review was submitted and will appear after approval.' });
+      toast({ title: `Thanks ${name.trim()}! 🍗`, description: 'Your review is now live!' });
       setName(''); setRating(0); setReviewText('');
       queryClient.invalidateQueries({ queryKey: ['approved-reviews'] });
     } catch {
@@ -152,7 +142,7 @@ const ReviewsSection: React.FC = () => {
   };
 
   return (
-    <section className="py-20 relative overflow-hidden">
+    <section className="py-12 sm:py-20 relative overflow-hidden">
       {/* Background glow */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-[0.03]" style={{
@@ -168,9 +158,9 @@ const ReviewsSection: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
-          <h2 className="text-3xl md:text-4xl font-bold">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">
             What Our <span className="text-gradient-gold">Customers</span> Say
           </h2>
           {reviews.length > 0 && (
@@ -183,15 +173,15 @@ const ReviewsSection: React.FC = () => {
             >
               <StarRating rating={Math.round(avgRating)} size="h-5 w-5" />
               <span className="text-lg font-bold text-gold">{avgRating.toFixed(1)} / 5</span>
-              <span className="text-muted-foreground text-sm">based on {reviews.length} reviews</span>
+              <span className="text-muted-foreground text-sm">({reviews.length})</span>
             </motion.div>
           )}
         </motion.div>
 
-        {/* Reviews carousel */}
+        {/* Reviews carousel with snap scroll */}
         {reviews.length > 0 && (
-          <div className="mb-16 overflow-x-auto pb-4 -mx-4 px-4">
-            <div className="flex gap-6">
+          <div className="mb-12 sm:mb-16 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scroll-smooth scrollbar-hide">
+            <div className="flex gap-4 sm:gap-6">
               {reviews.map((review, i) => (
                 <ReviewCard key={review.id} review={review} index={i} />
               ))}
@@ -207,15 +197,15 @@ const ReviewsSection: React.FC = () => {
           transition={{ duration: 0.8 }}
           className="max-w-lg mx-auto"
         >
-          <div className="rounded-xl border border-border/50 bg-card p-6 md:p-8 shadow-sm">
-            <h3 className="text-xl font-bold mb-6 text-center">Leave a Review</h3>
+          <div className="rounded-xl border border-border/50 bg-card p-5 sm:p-8 shadow-sm">
+            <h3 className="text-lg sm:text-xl font-bold mb-5 sm:mb-6 text-center">Leave a Review</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} maxLength={100} className="h-12" />
+              <Input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} maxLength={100} className="h-12 text-base" />
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Your Rating</label>
                 <StarRating rating={rating} onRate={setRating} interactive size="h-8 w-8" />
               </div>
-              <Textarea placeholder="Share your experience..." value={reviewText} onChange={e => setReviewText(e.target.value)} maxLength={500} rows={4} />
+              <Textarea placeholder="Share your experience..." value={reviewText} onChange={e => setReviewText(e.target.value)} maxLength={500} rows={4} className="text-base" />
               <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                 <Button
                   type="submit"
