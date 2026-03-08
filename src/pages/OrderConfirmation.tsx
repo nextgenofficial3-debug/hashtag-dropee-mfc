@@ -112,11 +112,6 @@ const OrderConfirmation: React.FC = () => {
   const pollStatus = useCallback(async () => {
     if (!order?.hubOrderId) return;
     try {
-      const { data } = await supabase.functions.invoke('check-hub-order-status', {
-        body: null,
-        method: 'GET',
-      });
-      // Pass hub_order_id as query param workaround - use POST instead
       const { data: statusData } = await supabase.functions.invoke('check-hub-order-status', {
         body: { hub_order_id: order.hubOrderId },
       });
