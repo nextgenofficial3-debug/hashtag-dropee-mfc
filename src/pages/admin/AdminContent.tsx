@@ -58,6 +58,7 @@ const AdminContent: React.FC = () => {
           phone_1: contactData.phone_1 || '',
           phone_2: contactData.phone_2 || '',
           map_embed_url: contactData.map_embed_url || '',
+          directions_url: (contactData as any).directions_url || '',
           image_url: contactData.image_url || '',
         });
       }
