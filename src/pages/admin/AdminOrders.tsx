@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Package, Clock, Truck, CheckCircle, RefreshCw, Bell } from 'lucide-react';
+import { Package, Clock, Truck, CheckCircle, RefreshCw, Bell, Download } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
