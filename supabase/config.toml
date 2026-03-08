@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.send-notification]
 verify_jwt = false
+
+[functions.forward-order-to-hub]
+verify_jwt = false
+
+[functions.check-hub-order-status]
+verify_jwt = false

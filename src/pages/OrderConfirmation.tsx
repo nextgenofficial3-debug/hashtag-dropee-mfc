@@ -1,12 +1,13 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Check, MessageCircle, ArrowLeft, Clock, Share2, MapPin, Truck } from 'lucide-react';
+import { Check, MessageCircle, ArrowLeft, Share2, MapPin, Truck, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface OrderState {
@@ -16,7 +17,30 @@ interface OrderState {
   total: number;
   paymentMethod: string;
   whatsappLink: string;
+  orderId?: string;
+  hubOrderId?: string;
 }
+
+const ORDER_STATUSES = ['Pending', 'Confirmed', 'Preparing', 'Picked Up', 'On The Way', 'Delivered'] as const;
+type OrderStatus = typeof ORDER_STATUSES[number];
+
+const STATUS_ICONS = ['⏳', '✅', '👨‍🍳', '📦', '🚚', '🎉'];
+
+const normalizeStatus = (raw: string): OrderStatus => {
+  const lower = raw.toLowerCase().replace(/[_-]/g, ' ').trim();
+  const map: Record<string, OrderStatus> = {
+    'pending': 'Pending',
+    'confirmed': 'Confirmed',
+    'preparing': 'Preparing',
+    'picked up': 'Picked Up',
+    'pickedup': 'Picked Up',
+    'on the way': 'On The Way',
+    'ontheway': 'On The Way',
+    'out for delivery': 'On The Way',
+    'delivered': 'Delivered',
+  };
+  return map[lower] || 'Pending';
+};
 
 const GoldParticle: React.FC<{ delay: number; x: number }> = ({ delay, x }) => (
   <motion.div
@@ -28,10 +52,156 @@ const GoldParticle: React.FC<{ delay: number; x: number }> = ({ delay, x }) => (
   />
 );
 
+const StatusStep: React.FC<{
+  label: string;
+  icon: string;
+  index: number;
+  currentIndex: number;
+  isLast: boolean;
+}> = ({ label, icon, index, currentIndex, isLast }) => {
+  const isCompleted = index < currentIndex;
+  const isCurrent = index === currentIndex;
+
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex flex-col items-center">
+        <motion.div
+          className={`h-10 w-10 rounded-full flex items-center justify-center text-lg border-2 transition-colors duration-500 ${
+            isCompleted
+              ? 'bg-primary border-primary text-primary-foreground'
+              : isCurrent
+              ? 'border-primary bg-primary/10'
+              : 'border-border bg-muted'
+          }`}
+          animate={isCurrent ? { scale: [1, 1.15, 1] } : {}}
+          transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+        >
+          {isCompleted ? <Check className="h-5 w-5" /> : icon}
+        </motion.div>
+        {!isLast && (
+          <motion.div
+            className="w-0.5 h-8 mt-1 rounded-full transition-colors duration-500"
+            style={{ backgroundColor: isCompleted ? 'hsl(var(--primary))' : 'hsl(var(--border))' }}
+          />
+        )}
+      </div>
+      <div className="pt-2">
+        <p className={`text-sm font-medium transition-colors duration-300 ${
+          isCompleted || isCurrent ? 'text-foreground' : 'text-muted-foreground'
+        }`}>
+          {label}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const OrderConfirmation: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const order = location.state as OrderState | null;
+
+  const [currentStatus, setCurrentStatus] = useState<OrderStatus>('Pending');
+  const [isWsConnected, setIsWsConnected] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reconnectAttempts = useRef(0);
+
+  const currentStatusIndex = ORDER_STATUSES.indexOf(currentStatus);
+
+  const pollStatus = useCallback(async () => {
+    if (!order?.hubOrderId) return;
+    try {
+      const { data } = await supabase.functions.invoke('check-hub-order-status', {
+        body: null,
+        method: 'GET',
+      });
+      // Pass hub_order_id as query param workaround - use POST instead
+      const { data: statusData } = await supabase.functions.invoke('check-hub-order-status', {
+        body: { hub_order_id: order.hubOrderId },
+      });
+      if (statusData?.status) {
+        setCurrentStatus(normalizeStatus(statusData.status));
+      }
+    } catch (err) {
+      console.error('Polling failed:', err);
+    }
+  }, [order?.hubOrderId]);
+
+  const startPolling = useCallback(() => {
+    if (pollingRef.current) return;
+    pollingRef.current = setInterval(pollStatus, 15000);
+    pollStatus(); // immediate first poll
+  }, [pollStatus]);
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, []);
+
+  const connectWebSocket = useCallback(() => {
+    if (!order?.hubOrderId) return;
+
+    // Get hub URL from edge function env - we'll use a meta approach
+    // Since we can't access env vars client-side, we use the edge function for polling
+    // and attempt WS connection if hub URL is configured
+    const hubUrl = (window as any).__ORDER_HUB_URL;
+    if (!hubUrl) {
+      // No hub URL available client-side, use polling only
+      startPolling();
+      return;
+    }
+
+    const wsUrl = hubUrl.replace(/^http/, 'ws');
+    const ws = new WebSocket(`${wsUrl}?source=cafe&api_key=${(window as any).__ORDER_HUB_API_KEY || ''}`);
+
+    ws.onopen = () => {
+      setIsWsConnected(true);
+      reconnectAttempts.current = 0;
+      stopPolling();
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.hub_order_id === order.hubOrderId && msg.status) {
+          setCurrentStatus(normalizeStatus(msg.status));
+        }
+      } catch {
+        console.error('Invalid WS message');
+      }
+    };
+
+    ws.onclose = () => {
+      setIsWsConnected(false);
+      startPolling();
+      // Reconnect with exponential backoff
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+      reconnectAttempts.current++;
+      setTimeout(connectWebSocket, delay);
+    };
+
+    ws.onerror = () => {
+      ws.close();
+    };
+
+    wsRef.current = ws;
+  }, [order?.hubOrderId, startPolling, stopPolling]);
+
+  useEffect(() => {
+    if (!order?.hubOrderId) return;
+
+    // Start with polling since hub URL isn't available client-side
+    startPolling();
+    connectWebSocket();
+
+    return () => {
+      stopPolling();
+      wsRef.current?.close();
+    };
+  }, [order?.hubOrderId, startPolling, connectWebSocket, stopPolling]);
 
   if (!order) {
     return (
@@ -57,6 +227,8 @@ const OrderConfirmation: React.FC = () => {
       toast.success('Order details copied!');
     }
   };
+
+  const isDelivered = currentStatus === 'Delivered';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -95,16 +267,62 @@ const OrderConfirmation: React.FC = () => {
               Order Placed Successfully!
             </motion.h1>
 
-            <motion.div
-              className="flex items-center gap-2 mt-3 text-muted-foreground text-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-            >
-              <Clock className="h-4 w-4" />
-              <span>Estimated ready in ~20-30 minutes</span>
-            </motion.div>
+            {order.hubOrderId && (
+              <motion.div
+                className="flex items-center gap-2 mt-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+              >
+                {isWsConnected ? (
+                  <Wifi className="h-3 w-3 text-green-500" />
+                ) : (
+                  <WifiOff className="h-3 w-3 text-muted-foreground" />
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {isWsConnected ? 'Live tracking' : 'Checking status...'}
+                </span>
+              </motion.div>
+            )}
           </div>
+
+          {/* Live Order Tracker */}
+          {order.hubOrderId && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              className="mb-6"
+            >
+              <Card>
+                <CardContent className="p-5">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Truck className="h-4 w-4" /> Order Status
+                  </h3>
+                  <div className="space-y-0">
+                    <AnimatePresence>
+                      {ORDER_STATUSES.map((status, i) => (
+                        <motion.div
+                          key={status}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.9 + i * 0.08 }}
+                        >
+                          <StatusStep
+                            label={status}
+                            icon={STATUS_ICONS[i]}
+                            index={i}
+                            currentIndex={currentStatusIndex}
+                            isLast={i === ORDER_STATUSES.length - 1}
+                          />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Delivery info card */}
           <motion.div
