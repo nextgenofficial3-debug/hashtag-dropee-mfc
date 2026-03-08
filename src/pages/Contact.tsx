@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Phone, Mail, Clock, MessageCircle } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, MessageCircle, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSiteContent } from '@/hooks/useSiteContent';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
