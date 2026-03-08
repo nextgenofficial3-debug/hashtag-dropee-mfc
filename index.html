@@ -69,16 +69,15 @@
     <link rel="manifest" href="/manifest.json" />
   </head>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/pwabuilder-sw.js');
-      });
-    }
-  </script>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/pwabuilder-sw.js');
+        });
+      }
+    </script>
   </body>
 </html>
