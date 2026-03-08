@@ -134,6 +134,8 @@ const AdminProducts: React.FC = () => {
       price: parseFloat(formData.price),
       category_id: formData.category_id || null,
       in_stock: formData.in_stock,
+      is_bestseller: formData.is_bestseller,
+      is_spicy: formData.is_spicy,
       images: [...formData.images, ...uploadedUrls],
     };
 
