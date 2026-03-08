@@ -281,6 +281,34 @@ const Checkout: React.FC = () => {
                     <span className="text-muted-foreground">Subtotal ({items.length} items)</span>
                     <span className="font-bold">₹{subtotal.toFixed(0)}</span>
                   </div>
+
+                  {/* Coupon Code */}
+                  <div className="flex gap-2 mt-3">
+                    <div className="relative flex-1">
+                      <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Coupon code"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        disabled={couponApplied}
+                        className="pl-9 uppercase"
+                      />
+                    </div>
+                    {couponApplied ? (
+                      <Button variant="outline" size="sm" onClick={() => { setCouponApplied(false); setCouponDiscount(0); setCouponCode(''); }}>
+                        Remove
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={applyCoupon} disabled={couponLoading || !couponCode.trim()}>
+                        Apply
+                      </Button>
+                    )}
+                  </div>
+                  {couponApplied && (
+                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-green-500 flex items-center gap-1">
+                      <Check className="h-3 w-3" /> Coupon applied: -₹{couponDiscount.toFixed(0)}
+                    </motion.p>
+                  )}
                 </div>
               )}
 
