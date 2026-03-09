@@ -167,7 +167,7 @@ const Shop: React.FC = () => {
       <Footer />
       <CartSidebar />
       <WhatsAppButton />
-      <MobileOrderBar />
+      <BottomTabBar />
     </div>
   );
 };
