@@ -55,7 +55,7 @@ const Contact: React.FC = () => {
 
       <Header />
 
-      <main className="container py-16 relative z-10">
+      <main className="container py-8 md:py-16 relative z-10">
         {/* Hero */}
         <motion.section
           initial={{ opacity: 0 }}
