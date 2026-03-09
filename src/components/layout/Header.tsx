@@ -34,6 +34,7 @@ const Header: React.FC = () => {
     { href: '/notifications', label: 'Notifications', icon: Bell },
     { href: '/install', label: 'Install App', icon: Download },
     { href: '/contact', label: 'Contact Us', icon: MessageSquare },
+    { href: '/admin', label: 'Admin Panel', icon: Shield },
   ];
 
   return (
