@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Clock, MapPin, Phone, Download } from 'lucide-react';
 import { useActivePromotions } from '@/hooks/usePromotions';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useSiteContent } from '@/hooks/useSiteContent';
 import { Link } from 'react-router-dom';
 
 const wordReveal = {
