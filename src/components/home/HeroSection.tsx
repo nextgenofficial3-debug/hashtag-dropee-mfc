@@ -212,7 +212,7 @@ const HeroSection: React.FC = () => {
 
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <a href={`tel:${settings?.whatsapp_primary?.replace(/[^0-9+]/g, '')}`}>
-                <Button size="lg" className="text-base px-8 py-6 bg-green-600 hover:bg-green-700 text-white">
+                <Button size="lg" className="text-sm md:text-base px-6 py-5 md:px-8 md:py-6 bg-green-600 hover:bg-green-700 text-white">
                   <Phone className="h-5 w-5 mr-2" />
                   Call Now
                 </Button>
