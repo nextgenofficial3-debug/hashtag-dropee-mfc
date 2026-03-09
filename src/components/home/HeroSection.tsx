@@ -96,8 +96,8 @@ const HeroSection: React.FC = () => {
         />
       ))}
 
-      <div className="container relative z-10 py-20 md:py-28">
-        <div className="max-w-3xl space-y-8">
+      <div className="container relative z-10 py-12 md:py-28">
+        <div className="max-w-3xl space-y-6 md:space-y-8">
           {/* Live open/close badge */}
           {settings && (
             <motion.div
