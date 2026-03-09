@@ -1,13 +1,12 @@
 import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ShoppingCart, Menu, Phone, Bell } from 'lucide-react';
+import { ShoppingCart, Phone, Bell } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useCart } from '@/contexts/CartContext';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Header: React.FC = () => {
   const location = useLocation();
