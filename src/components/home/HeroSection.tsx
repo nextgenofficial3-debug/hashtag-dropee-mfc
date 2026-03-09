@@ -203,7 +203,7 @@ const HeroSection: React.FC = () => {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Button size="lg" variant="outline" className="text-base px-8 py-6 border-border/50 text-foreground hover:border-foreground/30">
+                <Button size="lg" variant="outline" className="text-sm md:text-base px-6 py-5 md:px-8 md:py-6 border-border/50 text-foreground hover:border-foreground/30">
                   <MapPin className="h-5 w-5 mr-2" />
                   Get Directions
                 </Button>
