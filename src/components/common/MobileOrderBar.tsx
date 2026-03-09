@@ -32,11 +32,15 @@ const MobileOrderBar: React.FC = () => {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
-          className="fixed bottom-0 left-0 right-0 z-50 p-3 md:hidden"
+          className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
           style={{
-            background: 'hsl(0 0% 6% / 0.85)',
-            backdropFilter: 'blur(20px)',
+            background: 'hsl(0 0% 6% / 0.92)',
+            backdropFilter: 'blur(24px) saturate(180%)',
             borderTop: '1px solid hsl(0 0% 100% / 0.08)',
+            paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+            paddingTop: '0.75rem',
+            paddingLeft: 'max(0.75rem, env(safe-area-inset-left))',
+            paddingRight: 'max(0.75rem, env(safe-area-inset-right))',
           }}
         >
           <div className="flex items-center gap-2">

@@ -164,7 +164,7 @@ const Footer: React.FC = () => {
           </motion.div>
         </div>
 
-        <div className="mt-10 pt-8 border-t border-border/20 text-center text-sm text-muted-foreground/50 space-y-2">
+        <div className="mt-10 pt-8 pb-20 md:pb-0 border-t border-border/20 text-center text-sm text-muted-foreground/50 space-y-2">
           <p>© 2026 MFC - Makyo Fried Chicken. All rights reserved.</p>
           <p className="text-xs opacity-70">Developed By Jihal Shimray eX Holdings PVT LTD.</p>
         </div>

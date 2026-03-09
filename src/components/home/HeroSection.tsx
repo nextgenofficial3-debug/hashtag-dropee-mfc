@@ -42,7 +42,7 @@ const HeroSection: React.FC = () => {
   return (
     <motion.section 
       style={{ y: heroY, opacity: heroOpacity }}
-      className="relative min-h-[92vh] flex items-center overflow-hidden"
+      className="relative min-h-[80vh] md:min-h-[92vh] flex items-center overflow-hidden"
     >
       {/* Deep cinematic gradient */}
       <div className="absolute inset-0" style={{
@@ -96,8 +96,8 @@ const HeroSection: React.FC = () => {
         />
       ))}
 
-      <div className="container relative z-10 py-20 md:py-28">
-        <div className="max-w-3xl space-y-8">
+      <div className="container relative z-10 py-12 md:py-28">
+        <div className="max-w-3xl space-y-6 md:space-y-8">
           {/* Live open/close badge */}
           {settings && (
             <motion.div
@@ -142,7 +142,7 @@ const HeroSection: React.FC = () => {
           )}
 
           {/* Headline - word-by-word reveal */}
-          <h1 className="text-5xl md:text-6xl lg:text-8xl font-black tracking-tight leading-[0.95]">
+          <h1 className="text-4xl md:text-6xl lg:text-8xl font-black tracking-tight leading-[0.95]">
             {headlineWords.map((word, i) => (
               <motion.span
                 key={word}
@@ -174,13 +174,13 @@ const HeroSection: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.8, duration: 0.8 }}
-            className="flex flex-wrap gap-4"
+            className="flex flex-wrap gap-3"
           >
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <Button
                 size="lg"
                 onClick={scrollToMenu}
-                className="text-base px-8 py-6 font-bold shadow-gold-glow"
+                className="text-sm md:text-base px-6 py-5 md:px-8 md:py-6 font-bold shadow-gold-glow"
                 style={{
                   background: 'linear-gradient(135deg, hsl(var(--brand-gold)) 0%, hsl(35 80% 48%) 100%)',
                   color: 'hsl(0 0% 5%)',
@@ -203,7 +203,7 @@ const HeroSection: React.FC = () => {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Button size="lg" variant="outline" className="text-base px-8 py-6 border-border/50 text-foreground hover:border-foreground/30">
+                <Button size="lg" variant="outline" className="text-sm md:text-base px-6 py-5 md:px-8 md:py-6 border-border/50 text-foreground hover:border-foreground/30">
                   <MapPin className="h-5 w-5 mr-2" />
                   Get Directions
                 </Button>
@@ -212,7 +212,7 @@ const HeroSection: React.FC = () => {
 
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <a href={`tel:${settings?.whatsapp_primary?.replace(/[^0-9+]/g, '')}`}>
-                <Button size="lg" className="text-base px-8 py-6 bg-green-600 hover:bg-green-700 text-white">
+                <Button size="lg" className="text-sm md:text-base px-6 py-5 md:px-8 md:py-6 bg-green-600 hover:bg-green-700 text-white">
                   <Phone className="h-5 w-5 mr-2" />
                   Call Now
                 </Button>
@@ -221,7 +221,7 @@ const HeroSection: React.FC = () => {
 
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <Link to="/install">
-                <Button size="lg" variant="outline" className="text-base px-8 py-6 border-border/50 text-foreground hover:border-foreground/30">
+                <Button size="lg" variant="outline" className="text-sm md:text-base px-6 py-5 md:px-8 md:py-6 border-border/50 text-foreground hover:border-foreground/30">
                   <Download className="h-5 w-5 mr-2" />
                   Download App
                 </Button>

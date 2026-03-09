@@ -24,7 +24,7 @@ const ProductGrid: React.FC = () => {
   });
 
   return (
-    <section className="py-20 relative">
+    <section className="py-10 md:py-20 relative">
       {/* Background ambient effect */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <motion.div
@@ -148,7 +148,7 @@ const ProductGrid: React.FC = () => {
 
         {/* Products Grid */}
         {productsLoading ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <motion.div 
                 key={i} 
@@ -195,7 +195,7 @@ const ProductGrid: React.FC = () => {
         ) : (
           <motion.div
             layout
-            className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
           >
             <AnimatePresence mode="popLayout">
               {filteredProducts?.map((product, index) => (

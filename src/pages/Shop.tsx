@@ -136,7 +136,7 @@ const Shop: React.FC = () => {
 
             {/* Products */}
             {isLoading ? (
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="space-y-3">
                     <Skeleton className="aspect-[4/3] w-full rounded-xl" />
@@ -153,7 +153,7 @@ const Shop: React.FC = () => {
                 <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
               </motion.div>
             ) : (
-              <motion.div layout className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <motion.div layout className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 <AnimatePresence mode="popLayout">
                   {filteredProducts?.map((product, index) => (
                     <ProductCard key={product.id} product={product} index={index} />
