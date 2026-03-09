@@ -42,7 +42,7 @@ const HeroSection: React.FC = () => {
   return (
     <motion.section 
       style={{ y: heroY, opacity: heroOpacity }}
-      className="relative min-h-[92vh] flex items-center overflow-hidden"
+      className="relative min-h-[80vh] md:min-h-[92vh] flex items-center overflow-hidden"
     >
       {/* Deep cinematic gradient */}
       <div className="absolute inset-0" style={{
