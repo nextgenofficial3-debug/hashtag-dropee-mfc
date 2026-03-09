@@ -12,7 +12,7 @@ const Header: React.FC = () => {
   const location = useLocation();
   const { totalItems, setIsCartOpen } = useCart();
   const { data: settings } = useStoreSettings();
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const isMobile = useIsMobile();
   const { scrollY } = useScroll();
   
   const headerOpacity = useTransform(scrollY, [0, 100], [0.6, 0.92]);
