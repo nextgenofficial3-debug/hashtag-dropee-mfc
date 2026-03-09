@@ -199,7 +199,7 @@ const HeroSection: React.FC = () => {
 
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <a
-                href="https://maps.google.com/?q=Viewland+Zone+II+Ukhrul"
+                href={(contactContent as any)?.directions_url || 'https://maps.google.com/?q=Viewland+Zone+II+Ukhrul'}
                 target="_blank"
                 rel="noopener noreferrer"
               >
