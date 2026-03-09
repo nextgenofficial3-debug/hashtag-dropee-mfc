@@ -43,7 +43,7 @@ const Index: React.FC = () => {
         <Footer />
         <CartSidebar />
         <WhatsAppButton />
-        <MobileOrderBar />
+        <BottomTabBar />
       </motion.div>
     </>
   );
