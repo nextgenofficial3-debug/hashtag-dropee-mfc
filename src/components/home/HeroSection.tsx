@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Clock, MapPin, Phone, Download } from 'lucide-react';
 import { useActivePromotions } from '@/hooks/usePromotions';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useSiteContent } from '@/hooks/useSiteContent';
 import { Link } from 'react-router-dom';
 
 const wordReveal = {
@@ -24,6 +25,7 @@ const stats = [
 const HeroSection: React.FC = () => {
   const { data: promotions } = useActivePromotions();
   const { data: settings } = useStoreSettings();
+  const { data: contactContent } = useSiteContent('contact');
   const { scrollYProgress } = useScroll();
   
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, 80]);
@@ -197,7 +199,7 @@ const HeroSection: React.FC = () => {
 
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <a
-                href="https://maps.google.com/?q=Viewland+Zone+II+Ukhrul"
+                href={(contactContent as any)?.directions_url || 'https://maps.google.com/?q=Viewland+Zone+II+Ukhrul'}
                 target="_blank"
                 rel="noopener noreferrer"
               >
