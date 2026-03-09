@@ -25,6 +25,7 @@ const stats = [
 const HeroSection: React.FC = () => {
   const { data: promotions } = useActivePromotions();
   const { data: settings } = useStoreSettings();
+  const { data: contactContent } = useSiteContent('contact');
   const { scrollYProgress } = useScroll();
   
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, 80]);
