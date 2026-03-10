@@ -331,42 +331,63 @@ export type Database = {
       store_settings: {
         Row: {
           admin_password_hash: string
+          average_rating: string | null
+          base_delivery_fee: number
           closing_time: string | null
+          customers_served: string | null
           id: string
           is_open: boolean | null
+          menu_images: string[] | null
           open_days: number[] | null
           opening_time: string | null
+          packaging_fee: number
+          per_km_delivery_fee: number
           updated_at: string
           upi_id: string | null
           use_scheduled_hours: boolean | null
           whatsapp_primary: string | null
           whatsapp_secondary: string | null
+          years_running: string | null
         }
         Insert: {
           admin_password_hash: string
+          average_rating?: string | null
+          base_delivery_fee?: number
           closing_time?: string | null
+          customers_served?: string | null
           id?: string
           is_open?: boolean | null
+          menu_images?: string[] | null
           open_days?: number[] | null
           opening_time?: string | null
+          packaging_fee?: number
+          per_km_delivery_fee?: number
           updated_at?: string
           upi_id?: string | null
           use_scheduled_hours?: boolean | null
           whatsapp_primary?: string | null
           whatsapp_secondary?: string | null
+          years_running?: string | null
         }
         Update: {
           admin_password_hash?: string
+          average_rating?: string | null
+          base_delivery_fee?: number
           closing_time?: string | null
+          customers_served?: string | null
           id?: string
           is_open?: boolean | null
+          menu_images?: string[] | null
           open_days?: number[] | null
           opening_time?: string | null
+          packaging_fee?: number
+          per_km_delivery_fee?: number
           updated_at?: string
           upi_id?: string | null
           use_scheduled_hours?: boolean | null
           whatsapp_primary?: string | null
           whatsapp_secondary?: string | null
+          years_running?: string | null
         }
         Relationships: []
       }
