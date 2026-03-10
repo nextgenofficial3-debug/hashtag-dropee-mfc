@@ -13,7 +13,7 @@ const Contact: React.FC = () => {
   const { data: content, isLoading } = useSiteContent('contact');
   const { data: settings } = useStoreSettings();
 
-  const contactContent = content as {
+  const contactContent = content as unknown as {
     title: string;
     content: string;
     address: string | null;
