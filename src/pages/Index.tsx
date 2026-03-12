@@ -4,6 +4,7 @@ import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/home/HeroSection';
 import PromoBanner from '@/components/home/PromoBanner';
 import NewProductsSection from '@/components/home/NewProductsSection';
+import MenuPreview from '@/components/home/MenuPreview';
 import ReviewsSection from '@/components/home/ReviewsSection';
 import CartSidebar from '@/components/cart/CartSidebar';
 import WhatsAppButton from '@/components/common/WhatsAppButton';
