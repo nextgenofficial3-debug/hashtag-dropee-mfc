@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CreditCard, Truck, Copy, Check, ExternalLink, Package, Minus, Plus, ShoppingBag, Tag } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CreditCard, Truck, Copy, Check, ExternalLink, Package, Minus, Plus, ShoppingBag, Tag, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,18 +16,13 @@ import { CheckoutFormData } from '@/types/database';
 import { generateWhatsAppLink } from '@/lib/whatsapp';
 import { toast } from 'sonner';
 import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-
-const PACKAGING_FEE = 60;
-const DELIVERY_BASE_FEE = 100;
-const DELIVERY_PER_KM = 50;
 
 const STEPS = ['Review', 'Details', 'Payment', 'Summary'];
 
 const slideVariants = {
-  enter: (direction: number) => ({ x: direction > 0 ? 200 : -200, opacity: 0 }),
+  enter: (direction: number) => ({ x: direction > 0 ? 120 : -120, opacity: 0 }),
   center: { x: 0, opacity: 1 },
-  exit: (direction: number) => ({ x: direction > 0 ? -200 : 200, opacity: 0 }),
+  exit: (direction: number) => ({ x: direction > 0 ? -120 : 120, opacity: 0 }),
 };
 
 const Checkout: React.FC = () => {
@@ -48,6 +43,11 @@ const Checkout: React.FC = () => {
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponLoading, setCouponLoading] = useState(false);
 
+  // Use admin-configured fees
+  const packagingFee = settings?.packaging_fee ?? 60;
+  const deliveryBaseFee = settings?.base_delivery_fee ?? 100;
+  const deliveryPerKm = settings?.per_km_delivery_fee ?? 50;
+
   const calculateDiscount = () => {
     let totalDiscount = 0;
     items.forEach(item => {
@@ -60,9 +60,9 @@ const Checkout: React.FC = () => {
   };
 
   const discountAmount = calculateDiscount();
-  const deliveryKmFee = deliveryKm * DELIVERY_PER_KM;
-  const totalDelivery = DELIVERY_BASE_FEE + deliveryKmFee;
-  const grandTotal = subtotal - discountAmount - couponDiscount + PACKAGING_FEE + totalDelivery;
+  const deliveryKmFee = deliveryKm * deliveryPerKm;
+  const totalDelivery = deliveryBaseFee + deliveryKmFee;
+  const grandTotal = subtotal - discountAmount - couponDiscount + packagingFee + totalDelivery;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -115,7 +115,6 @@ const Checkout: React.FC = () => {
       setCouponApplied(true);
       toast.success(`Coupon applied! ₹${Math.min(discount, subtotal).toFixed(0)} off`);
 
-      // Increment used_count
       await supabase.from('coupons' as any).update({ used_count: (coupon.used_count || 0) + 1 }).eq('id', coupon.id);
     } catch {
       toast.error('Failed to apply coupon');
@@ -165,7 +164,6 @@ const Checkout: React.FC = () => {
         orderId = insertedOrder.id;
       }
 
-      // Forward order to hub
       if (orderId) {
         try {
           const { data: hubData } = await supabase.functions.invoke('forward-order-to-hub', {
@@ -190,11 +188,15 @@ const Checkout: React.FC = () => {
       console.error('Failed to save order:', err);
     }
 
+    // Generate WhatsApp link with admin-configured fees
     const whatsappLink = generateWhatsAppLink(
       settings?.whatsapp_primary || '+919774046387',
       items, subtotal, discountAmount, formData,
-      PACKAGING_FEE, DELIVERY_BASE_FEE, deliveryKm, DELIVERY_PER_KM
+      packagingFee, deliveryBaseFee, deliveryKm, deliveryPerKm
     );
+
+    // Open WhatsApp immediately
+    window.open(whatsappLink, '_blank');
 
     const orderData = {
       items: items.map(i => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })),
@@ -211,9 +213,9 @@ const Checkout: React.FC = () => {
 
   if (items.length === 0 && step === 0) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-background">
         <Header />
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center px-4">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
             <div className="text-6xl mb-4">🛒</div>
             <h2 className="text-2xl font-bold mb-2">Your cart is empty</h2>
@@ -221,46 +223,45 @@ const Checkout: React.FC = () => {
             <Button onClick={() => navigate('/')}>Browse Menu</Button>
           </motion.div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      <main className="flex-1 py-6">
-        <div className="container max-w-2xl">
+      <main className="flex-1 pb-32">
+        <div className="container max-w-2xl px-4 pt-4">
           {/* Back button */}
-          <Button variant="ghost" size="sm" onClick={() => step === 0 ? navigate('/') : goTo(step - 1)} className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> {step === 0 ? 'Back to Menu' : 'Back'}
+          <Button variant="ghost" size="sm" onClick={() => step === 0 ? navigate('/') : goTo(step - 1)} className="mb-3 -ml-2">
+            <ArrowLeft className="mr-1.5 h-4 w-4" /> {step === 0 ? 'Back' : 'Back'}
           </Button>
 
-          {/* Progress indicator */}
-          <div className="flex items-center justify-between mb-8">
+          {/* Progress indicator - compact for mobile */}
+          <div className="flex items-center justify-between mb-6">
             {STEPS.map((label, i) => (
               <div key={label} className="flex items-center flex-1 last:flex-none">
                 <button
                   onClick={() => i < step && goTo(i)}
-                  className={`flex flex-col items-center gap-1.5 ${i <= step ? 'cursor-pointer' : 'cursor-default'}`}
+                  className={`flex flex-col items-center gap-1 ${i <= step ? 'cursor-pointer' : 'cursor-default'}`}
                 >
                   <motion.div
-                    className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors duration-300 ${
+                    className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300 ${
                       i < step ? 'bg-primary border-primary text-primary-foreground'
                       : i === step ? 'border-primary text-primary bg-primary/10'
                       : 'border-border text-muted-foreground'
                     }`}
-                    animate={i === step ? { scale: [1, 1.1, 1] } : {}}
+                    animate={i === step ? { scale: [1, 1.08, 1] } : {}}
                     transition={{ duration: 0.4 }}
                   >
-                    {i < step ? <Check className="h-4 w-4" /> : i + 1}
+                    {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
                   </motion.div>
-                  <span className={`text-[11px] font-medium ${i <= step ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  <span className={`text-[10px] font-medium ${i <= step ? 'text-foreground' : 'text-muted-foreground'}`}>
                     {label}
                   </span>
                 </button>
                 {i < STEPS.length - 1 && (
-                  <div className={`flex-1 h-0.5 mx-2 rounded-full transition-colors duration-300 ${i < step ? 'bg-primary' : 'bg-border'}`} />
+                  <div className={`flex-1 h-0.5 mx-1.5 rounded-full transition-colors duration-300 ${i < step ? 'bg-primary' : 'bg-border'}`} />
                 )}
               </div>
             ))}
@@ -275,38 +276,38 @@ const Checkout: React.FC = () => {
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
             >
               {step === 0 && (
-                <div className="space-y-4">
-                  <h2 className="text-xl font-bold flex items-center gap-2">
-                    <ShoppingBag className="h-5 w-5 text-primary" /> Review Your Order
+                <div className="space-y-3">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <ShoppingBag className="h-5 w-5 text-primary" /> Review Order
                   </h2>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {items.map(item => (
                       <Card key={item.product.id} className="overflow-hidden">
-                        <CardContent className="p-3 flex items-center gap-3">
-                          <div className="h-16 w-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        <CardContent className="p-2.5 flex items-center gap-2.5">
+                          <div className="h-14 w-14 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                             {item.product.images?.[0] ? (
                               <img src={item.product.images[0]} alt={item.product.name} className="h-full w-full object-cover" />
                             ) : (
-                              <div className="h-full w-full flex items-center justify-center text-2xl">🍗</div>
+                              <div className="h-full w-full flex items-center justify-center text-xl">🍗</div>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-sm line-clamp-1">{item.product.name}</h3>
-                            <p className="text-gold font-bold text-sm">₹{item.product.price}</p>
+                            <p className="text-primary font-bold text-sm">₹{item.product.price}</p>
                           </div>
                           <div className="flex items-center rounded-lg border border-border overflow-hidden">
-                            <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="h-8 w-8 flex items-center justify-center hover:bg-muted transition-colors">
-                              <Minus className="h-3.5 w-3.5" />
+                            <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="h-7 w-7 flex items-center justify-center hover:bg-muted active:bg-muted/80 transition-colors">
+                              <Minus className="h-3 w-3" />
                             </button>
-                            <span className="h-8 w-8 flex items-center justify-center text-sm font-bold">{item.quantity}</span>
-                            <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="h-8 w-8 flex items-center justify-center hover:bg-muted transition-colors">
-                              <Plus className="h-3.5 w-3.5" />
+                            <span className="h-7 w-7 flex items-center justify-center text-xs font-bold">{item.quantity}</span>
+                            <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="h-7 w-7 flex items-center justify-center hover:bg-muted active:bg-muted/80 transition-colors">
+                              <Plus className="h-3 w-3" />
                             </button>
                           </div>
-                          <span className="font-bold text-sm w-16 text-right">₹{(item.product.price * item.quantity).toFixed(0)}</span>
+                          <span className="font-bold text-sm w-14 text-right">₹{(item.product.price * item.quantity).toFixed(0)}</span>
                         </CardContent>
                       </Card>
                     ))}
@@ -318,23 +319,23 @@ const Checkout: React.FC = () => {
                   </div>
 
                   {/* Coupon Code */}
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex gap-2">
                     <div className="relative flex-1">
-                      <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Tag className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         placeholder="Coupon code"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         disabled={couponApplied}
-                        className="pl-9 uppercase"
+                        className="pl-8 h-9 uppercase text-sm"
                       />
                     </div>
                     {couponApplied ? (
-                      <Button variant="outline" size="sm" onClick={() => { setCouponApplied(false); setCouponDiscount(0); setCouponCode(''); }}>
+                      <Button variant="outline" size="sm" className="h-9" onClick={() => { setCouponApplied(false); setCouponDiscount(0); setCouponCode(''); }}>
                         Remove
                       </Button>
                     ) : (
-                      <Button variant="outline" size="sm" onClick={applyCoupon} disabled={couponLoading || !couponCode.trim()}>
+                      <Button variant="outline" size="sm" className="h-9" onClick={applyCoupon} disabled={couponLoading || !couponCode.trim()}>
                         Apply
                       </Button>
                     )}
@@ -348,78 +349,78 @@ const Checkout: React.FC = () => {
               )}
 
               {step === 1 && (
-                <div className="space-y-5">
-                  <h2 className="text-xl font-bold flex items-center gap-2">
+                <div className="space-y-4">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
                     <Truck className="h-5 w-5 text-primary" /> Delivery Details
                   </h2>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div>
-                      <Label htmlFor="name">Full Name *</Label>
-                      <Input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Enter your name" required className="mt-1.5" />
+                      <Label htmlFor="name" className="text-sm">Full Name *</Label>
+                      <Input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Enter your name" required className="mt-1 h-10" />
                     </div>
                     <div>
-                      <Label htmlFor="phone">Phone Number *</Label>
-                      <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="+91 XXXXX XXXXX" required className="mt-1.5" />
+                      <Label htmlFor="phone" className="text-sm">Phone Number *</Label>
+                      <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="+91 XXXXX XXXXX" required className="mt-1 h-10" />
                     </div>
                     <div>
-                      <Label htmlFor="address">Delivery Address *</Label>
-                      <Textarea id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Enter your complete address" rows={3} required className="mt-1.5" />
+                      <Label htmlFor="address" className="text-sm">Delivery Address *</Label>
+                      <Textarea id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Enter your complete address" rows={2} required className="mt-1 resize-none" />
                     </div>
                     <div>
-                      <Label htmlFor="deliveryKm">Distance from store (km)</Label>
-                      <Input id="deliveryKm" type="number" min="0" step="0.5" value={deliveryKm || ''} onChange={(e) => setDeliveryKm(parseFloat(e.target.value) || 0)} placeholder="e.g. 3" className="mt-1.5" />
-                      <p className="text-xs text-muted-foreground mt-1">Delivery by Hashtag Dropee: ₹{DELIVERY_BASE_FEE} base + ₹{DELIVERY_PER_KM}/km</p>
+                      <Label htmlFor="deliveryKm" className="text-sm">Distance from store (km)</Label>
+                      <Input id="deliveryKm" type="number" min="0" step="0.5" value={deliveryKm || ''} onChange={(e) => setDeliveryKm(parseFloat(e.target.value) || 0)} placeholder="e.g. 3" className="mt-1 h-10" />
+                      <p className="text-xs text-muted-foreground mt-1">Delivery: ₹{deliveryBaseFee} base + ₹{deliveryPerKm}/km</p>
                     </div>
                     <div>
-                      <Label htmlFor="instructions">Special Instructions (Optional)</Label>
-                      <Textarea id="instructions" name="instructions" value={formData.instructions} onChange={handleChange} placeholder="Any special requests?" rows={2} className="mt-1.5" />
+                      <Label htmlFor="instructions" className="text-sm">Special Instructions</Label>
+                      <Textarea id="instructions" name="instructions" value={formData.instructions} onChange={handleChange} placeholder="Any special requests?" rows={2} className="mt-1 resize-none" />
                     </div>
                   </div>
                 </div>
               )}
 
               {step === 2 && (
-                <div className="space-y-5">
-                  <h2 className="text-xl font-bold flex items-center gap-2">
+                <div className="space-y-4">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-primary" /> Payment Method
                   </h2>
                   <RadioGroup
                     value={formData.paymentMethod}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value as 'gpay' | 'cod' }))}
-                    className="space-y-3"
+                    className="space-y-2.5"
                   >
                     <motion.div
                       whileTap={{ scale: 0.98 }}
-                      className={`flex items-start space-x-3 rounded-xl border-2 p-5 cursor-pointer transition-colors ${formData.paymentMethod === 'gpay' ? 'border-primary bg-primary/5' : 'border-border'}`}
+                      className={`flex items-start space-x-3 rounded-xl border-2 p-4 cursor-pointer transition-colors ${formData.paymentMethod === 'gpay' ? 'border-primary bg-primary/5' : 'border-border'}`}
                       onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'gpay' }))}
                     >
                       <RadioGroupItem value="gpay" id="gpay" className="mt-0.5" />
                       <div className="flex-1">
-                        <Label htmlFor="gpay" className="font-semibold text-base cursor-pointer">GPay (UPI)</Label>
-                        <p className="text-sm text-muted-foreground mt-1">Pay via Google Pay and share screenshot on WhatsApp</p>
+                        <Label htmlFor="gpay" className="font-semibold text-sm cursor-pointer">GPay (UPI)</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">Pay via Google Pay and share screenshot on WhatsApp</p>
                       </div>
                     </motion.div>
 
                     <motion.div
                       whileTap={{ scale: 0.98 }}
-                      className={`flex items-start space-x-3 rounded-xl border-2 p-5 cursor-pointer transition-colors ${formData.paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border'}`}
+                      className={`flex items-start space-x-3 rounded-xl border-2 p-4 cursor-pointer transition-colors ${formData.paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border'}`}
                       onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'cod' }))}
                     >
                       <RadioGroupItem value="cod" id="cod" className="mt-0.5" />
                       <div className="flex-1">
-                        <Label htmlFor="cod" className="font-semibold text-base cursor-pointer">Cash on Delivery</Label>
-                        <p className="text-sm text-muted-foreground mt-1">Pay when your order arrives</p>
+                        <Label htmlFor="cod" className="font-semibold text-sm cursor-pointer">Cash on Delivery</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">Pay when your order arrives</p>
                       </div>
                     </motion.div>
                   </RadioGroup>
 
                   {formData.paymentMethod === 'gpay' && settings?.upi_id && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-4 bg-muted rounded-xl">
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3 bg-muted rounded-xl">
                       <p className="text-sm font-medium mb-2">UPI ID:</p>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 p-2.5 bg-background rounded-lg border text-sm">{settings.upi_id}</code>
-                        <Button type="button" variant="outline" size="icon" onClick={copyUPI}>
-                          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        <code className="flex-1 p-2 bg-background rounded-lg border text-xs break-all">{settings.upi_id}</code>
+                        <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={copyUPI}>
+                          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground mt-2">After payment, share the screenshot on WhatsApp</p>
@@ -429,18 +430,18 @@ const Checkout: React.FC = () => {
               )}
 
               {step === 3 && (
-                <div className="space-y-5">
-                  <h2 className="text-xl font-bold">Order Summary</h2>
+                <div className="space-y-4">
+                  <h2 className="text-lg font-bold">Order Summary</h2>
                   <Card>
-                    <CardContent className="p-5 space-y-4">
+                    <CardContent className="p-4 space-y-3">
                       {items.map(item => (
                         <div key={item.product.id} className="flex justify-between text-sm">
-                          <span>{item.product.name} × {item.quantity}</span>
-                          <span>₹{(item.product.price * item.quantity).toFixed(0)}</span>
+                          <span className="line-clamp-1 flex-1 mr-2">{item.product.name} × {item.quantity}</span>
+                          <span className="shrink-0">₹{(item.product.price * item.quantity).toFixed(0)}</span>
                         </div>
                       ))}
                       <Separator />
-                      <div className="space-y-2 text-sm">
+                      <div className="space-y-1.5 text-sm">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Subtotal</span>
                           <span>₹{subtotal.toFixed(0)}</span>
@@ -458,30 +459,25 @@ const Checkout: React.FC = () => {
                           </div>
                         )}
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground flex items-center gap-1"><Package className="h-3.5 w-3.5" /> Packaging</span>
-                          <span>₹{PACKAGING_FEE}</span>
+                          <span className="text-muted-foreground flex items-center gap-1"><Package className="h-3 w-3" /> Packaging</span>
+                          <span>₹{packagingFee}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">
-                            <span className="block">🚚 Delivery (Hashtag Dropee)</span>
-                            <span className="text-xs">Base ₹{DELIVERY_BASE_FEE} {deliveryKm > 0 ? `+ ${deliveryKm}km × ₹${DELIVERY_PER_KM}` : ''}</span>
+                            <span className="block text-sm">🚚 Delivery</span>
+                            <span className="text-[10px]">₹{deliveryBaseFee} {deliveryKm > 0 ? `+ ${deliveryKm}km × ₹${deliveryPerKm}` : ''}</span>
                           </span>
                           <span>₹{totalDelivery}</span>
                         </div>
                       </div>
                       <Separator />
-                      <motion.div
-                        className="flex justify-between text-lg font-bold"
-                        initial={{ scale: 0.95 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300 }}
-                      >
+                      <div className="flex justify-between text-base font-bold">
                         <span>Grand Total</span>
-                        <span className="text-gold">₹{grandTotal.toFixed(0)}</span>
-                      </motion.div>
+                        <span className="text-primary">₹{grandTotal.toFixed(0)}</span>
+                      </div>
 
-                      <div className="pt-2 space-y-2 text-xs text-muted-foreground">
-                        <p>📍 {formData.address}</p>
+                      <div className="pt-1 space-y-1 text-xs text-muted-foreground">
+                        <p className="break-words">📍 {formData.address}</p>
                         <p>💳 {formData.paymentMethod === 'gpay' ? 'GPay (UPI)' : 'Cash on Delivery'}</p>
                       </div>
                     </CardContent>
@@ -490,31 +486,28 @@ const Checkout: React.FC = () => {
               )}
             </motion.div>
           </AnimatePresence>
-
-          {/* Navigation buttons */}
-          <div className="flex gap-3 mt-8">
-            {step > 0 && (
-              <Button variant="outline" size="lg" onClick={() => goTo(step - 1)} className="flex-1">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back
-              </Button>
-            )}
-            {step < 3 ? (
-              <Button size="lg" onClick={() => goTo(step + 1)} disabled={!canProceed()} className="flex-1">
-                Next <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button size="lg" onClick={handleSubmit} className="flex-1">
-                <ExternalLink className="mr-2 h-4 w-4" /> Place Order via WhatsApp
-              </Button>
-            )}
-          </div>
-
-          <p className="text-xs text-center text-muted-foreground mt-3">
-            You'll be redirected to WhatsApp with your order details
-          </p>
         </div>
       </main>
-      <Footer />
+
+      {/* Fixed bottom navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] z-50">
+        <div className="container max-w-2xl flex gap-2.5">
+          {step > 0 && (
+            <Button variant="outline" size="lg" onClick={() => goTo(step - 1)} className="flex-1 h-12">
+              <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
+            </Button>
+          )}
+          {step < 3 ? (
+            <Button size="lg" onClick={() => goTo(step + 1)} disabled={!canProceed()} className="flex-1 h-12 font-semibold">
+              Next <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Button>
+          ) : (
+            <Button size="lg" onClick={handleSubmit} className="flex-1 h-12 font-semibold gap-2">
+              <MessageCircle className="h-4 w-4" /> Place Order via WhatsApp
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
