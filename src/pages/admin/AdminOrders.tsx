@@ -42,7 +42,7 @@ const AdminOrders: React.FC = () => {
   const fetchOrders = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('orders')
+      .from('mfc_orders')
       .select('*')
       .order('created_at', { ascending: false });
     if (error) toast.error('Failed to load orders');
@@ -55,7 +55,7 @@ const AdminOrders: React.FC = () => {
 
     const channel = supabase
       .channel('orders-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mfc_orders' }, () => {
         fetchOrders();
       })
       .subscribe();
@@ -66,7 +66,7 @@ const AdminOrders: React.FC = () => {
   const { sendNotification } = usePushNotifications();
 
   const updateStatus = async (orderId: string, newStatus: string) => {
-    const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+    const { error } = await supabase.from('mfc_orders').update({ status: newStatus }).eq('id', orderId);
     if (error) {
       toast.error('Failed to update');
     } else {
@@ -81,7 +81,7 @@ const AdminOrders: React.FC = () => {
   };
 
   const deleteOrder = async (orderId: string) => {
-    const { error } = await supabase.from('orders').delete().eq('id', orderId);
+    const { error } = await supabase.from('mfc_orders').delete().eq('id', orderId);
     if (error) {
       toast.error('Failed to delete order');
     } else {

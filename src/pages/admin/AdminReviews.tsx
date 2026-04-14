@@ -41,7 +41,7 @@ const AdminReviews: React.FC = () => {
     queryKey: ['admin-reviews'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('reviews')
+        .from('mfc_reviews')
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -63,7 +63,7 @@ const AdminReviews: React.FC = () => {
   };
 
   const toggleApproval = async (id: string, currentStatus: boolean) => {
-    const { error } = await supabase.from('reviews').update({ is_approved: !currentStatus }).eq('id', id);
+    const { error } = await supabase.from('mfc_reviews').update({ is_approved: !currentStatus }).eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
@@ -74,7 +74,7 @@ const AdminReviews: React.FC = () => {
   };
 
   const deleteReview = async (id: string) => {
-    const { error } = await supabase.from('reviews').delete().eq('id', id);
+    const { error } = await supabase.from('mfc_reviews').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {

@@ -1,16 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /admin
-Disallow: /admin/*
-
+Disallow: /admin/
 Sitemap: https://mfc.discoverukhrul.site/sitemap.xml
-
-# Allow all major crawlers
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Googlebot-Image
-Allow: /

@@ -8,7 +8,7 @@ export const useCategories = () => {
     queryKey: ['categories'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('categories')
+        .from('mfc_categories')
         .select('*')
         .order('display_order', { ascending: true });
 
@@ -24,7 +24,7 @@ export const useCreateCategory = () => {
   return useMutation({
     mutationFn: async (category: Omit<Category, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
-        .from('categories')
+        .from('mfc_categories')
         .insert(category)
         .select()
         .single();
@@ -48,7 +48,7 @@ export const useUpdateCategory = () => {
   return useMutation({
     mutationFn: async ({ id, ...category }: Partial<Category> & { id: string }) => {
       const { data, error } = await supabase
-        .from('categories')
+        .from('mfc_categories')
         .update(category)
         .eq('id', id)
         .select()
@@ -73,7 +73,7 @@ export const useDeleteCategory = () => {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('categories')
+        .from('mfc_categories')
         .delete()
         .eq('id', id);
 

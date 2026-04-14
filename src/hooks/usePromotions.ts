@@ -8,7 +8,7 @@ export const usePromotions = () => {
     queryKey: ['promotions'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('promotions')
+        .from('mfc_promotions')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -24,7 +24,7 @@ export const useActivePromotions = () => {
     queryFn: async () => {
       const now = new Date().toISOString();
       const { data, error } = await supabase
-        .from('promotions')
+        .from('mfc_promotions')
         .select('*')
         .eq('is_active', true)
         .lte('valid_from', now)
@@ -43,7 +43,7 @@ export const useCreatePromotion = () => {
   return useMutation({
     mutationFn: async (promotion: Omit<Promotion, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
-        .from('promotions')
+        .from('mfc_promotions')
         .insert(promotion)
         .select()
         .single();
@@ -67,7 +67,7 @@ export const useUpdatePromotion = () => {
   return useMutation({
     mutationFn: async ({ id, ...promotion }: Partial<Promotion> & { id: string }) => {
       const { data, error } = await supabase
-        .from('promotions')
+        .from('mfc_promotions')
         .update(promotion)
         .eq('id', id)
         .select()
@@ -92,7 +92,7 @@ export const useDeletePromotion = () => {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('promotions')
+        .from('mfc_promotions')
         .delete()
         .eq('id', id);
 

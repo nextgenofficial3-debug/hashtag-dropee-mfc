@@ -83,7 +83,7 @@ const Checkout: React.FC = () => {
     try {
       const { supabase } = await import('@/integrations/supabase/client');
       const { data, error } = await supabase
-        .from('coupons' as any)
+        .from('mfc_coupons')
         .select('*')
         .eq('code', couponCode.toUpperCase().trim())
         .eq('is_active', true)
@@ -115,7 +115,7 @@ const Checkout: React.FC = () => {
       setCouponApplied(true);
       toast.success(`Coupon applied! ₹${Math.min(discount, subtotal).toFixed(0)} off`);
 
-      await supabase.from('coupons' as any).update({ used_count: (coupon.used_count || 0) + 1 }).eq('id', coupon.id);
+      await supabase.from('mfc_coupons').update({ used_count: (coupon.used_count || 0) + 1 }).eq('id', coupon.id);
     } catch {
       toast.error('Failed to apply coupon');
     }
@@ -145,44 +145,32 @@ const Checkout: React.FC = () => {
     try {
       const { supabase } = await import('@/integrations/supabase/client');
       const orderItems = items.map(i => ({ name: i.product.name, quantity: i.quantity, price: i.product.price }));
-      
-      const { data: insertedOrder, error: insertError } = await supabase.from('orders').insert({
-        customer_name: formData.name,
-        customer_phone: formData.phone,
-        customer_address: formData.address,
-        special_instructions: formData.instructions || null,
-        payment_method: formData.paymentMethod,
-        items: orderItems,
-        subtotal,
-        discount: discountAmount,
-        total: grandTotal,
-      }).select('id').single();
+
+      // Insert into mfc_orders on the shared Supabase backend.
+      // A Postgres trigger (trg_mfc_bridge_order) will automatically
+      // create a matching delivery_orders row for the agent app.
+      const { data: insertedOrder, error: insertError } = await supabase
+        .from('mfc_orders')
+        .insert({
+          customer_name: formData.name,
+          customer_phone: formData.phone,
+          customer_address: formData.address,
+          special_instructions: formData.instructions || null,
+          payment_method: formData.paymentMethod,
+          items: orderItems,
+          subtotal,
+          discount: discountAmount,
+          total: grandTotal,
+        })
+        .select('id, hub_order_id')
+        .single();
 
       if (insertError) {
         console.error('Failed to save order:', insertError);
       } else {
         orderId = insertedOrder.id;
-      }
-
-      if (orderId) {
-        try {
-          const { data: hubData } = await supabase.functions.invoke('forward-order-to-hub', {
-            body: {
-              orderId,
-              customerName: formData.name,
-              customerPhone: formData.phone,
-              customerAddress: formData.address,
-              items: orderItems,
-              total: grandTotal,
-              specialInstructions: formData.instructions || '',
-            },
-          });
-          if (hubData?.hub_order_id) {
-            hubOrderId = hubData.hub_order_id;
-          }
-        } catch (hubErr) {
-          console.error('Failed to forward to hub:', hubErr);
-        }
+        // hub_order_id is populated by the DB trigger pointing at delivery_orders
+        hubOrderId = insertedOrder.hub_order_id ?? '';
       }
     } catch (err) {
       console.error('Failed to save order:', err);

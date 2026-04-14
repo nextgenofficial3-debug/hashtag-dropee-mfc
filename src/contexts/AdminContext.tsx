@@ -14,6 +14,7 @@ interface AdminContextType {
   isAdmin: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error: string | null }>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -165,6 +166,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const loginWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/admin/dashboard`,
+        queryParams: { access_type: 'offline', prompt: 'consent' },
+      },
+    });
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -173,7 +184,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <AdminContext.Provider value={{ user, isAdmin, isLoading, login, logout }}>
+    <AdminContext.Provider value={{ user, isAdmin, isLoading, login, loginWithGoogle, logout }}>
       {children}
     </AdminContext.Provider>
   );

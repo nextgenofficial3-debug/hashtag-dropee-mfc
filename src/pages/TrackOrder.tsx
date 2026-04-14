@@ -44,7 +44,7 @@ const TrackOrder: React.FC = () => {
     }
     setLoading(true);
     const { data, error } = await supabase
-      .from('orders')
+      .from('mfc_orders')
       .select('*')
       .ilike('customer_phone', `%${cleaned.slice(-10)}%`)
       .order('created_at', { ascending: false })

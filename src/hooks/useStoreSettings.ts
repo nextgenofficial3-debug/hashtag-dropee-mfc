@@ -8,7 +8,7 @@ export const useStoreSettings = () => {
     queryKey: ['store-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('store_settings')
+        .from('mfc_store_settings')
         .select('*')
         .limit(1)
         .single();
@@ -25,7 +25,7 @@ export const useUpdateStoreSettings = () => {
   return useMutation({
     mutationFn: async ({ id, ...settings }: Partial<StoreSettings> & { id: string }) => {
       const { data, error } = await supabase
-        .from('store_settings')
+        .from('mfc_store_settings')
         .update(settings)
         .eq('id', id)
         .select()

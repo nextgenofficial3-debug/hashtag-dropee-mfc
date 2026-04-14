@@ -31,7 +31,7 @@ const ProductDetailSheet: React.FC<ProductDetailSheetProps> = ({ product, open, 
     queryKey: ['product-reviews'],
     queryFn: async () => {
       const { data } = await supabase
-        .from('reviews')
+        .from('mfc_reviews')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(5);

@@ -8,10 +8,10 @@ export const useProducts = () => {
     queryKey: ['products'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('products')
+        .from('mfc_products')
         .select(`
           *,
-          category:categories(*)
+          category:mfc_categories(*)
         `)
         .order('created_at', { ascending: false });
 
@@ -26,10 +26,10 @@ export const useProductsByCategory = (categoryId: string | null) => {
     queryKey: ['products', 'category', categoryId],
     queryFn: async () => {
       let query = supabase
-        .from('products')
+        .from('mfc_products')
         .select(`
           *,
-          category:categories(*)
+          category:mfc_categories(*)
         `)
         .order('created_at', { ascending: false });
 
@@ -50,7 +50,7 @@ export const useCreateProduct = () => {
   return useMutation({
     mutationFn: async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
-        .from('products')
+        .from('mfc_products')
         .insert(product)
         .select()
         .single();
@@ -74,7 +74,7 @@ export const useUpdateProduct = () => {
   return useMutation({
     mutationFn: async ({ id, ...product }: Partial<Product> & { id: string }) => {
       const { data, error } = await supabase
-        .from('products')
+        .from('mfc_products')
         .update(product)
         .eq('id', id)
         .select()
@@ -99,7 +99,7 @@ export const useDeleteProduct = () => {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('products')
+        .from('mfc_products')
         .delete()
         .eq('id', id);
 

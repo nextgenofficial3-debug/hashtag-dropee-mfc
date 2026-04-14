@@ -106,7 +106,7 @@ serve(async (req) => {
     const { title, body, orderId } = await req.json();
 
     // Get VAPID keys
-    const { data: vapidData } = await serviceClient.from('vapid_keys').select('*').limit(1).single();
+    const { data: vapidData } = await serviceClient.from('mfc_vapid_keys').select('*').limit(1).single();
     if (!vapidData) {
       return new Response(JSON.stringify({ error: 'VAPID keys not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -114,7 +114,7 @@ serve(async (req) => {
     }
 
     // Get all subscriptions
-    const { data: subscriptions } = await serviceClient.from('push_subscriptions').select('*');
+    const { data: subscriptions } = await serviceClient.from('mfc_push_subscriptions').select('*');
     if (!subscriptions || subscriptions.length === 0) {
       return new Response(JSON.stringify({ error: 'No subscribers found', sent: 0 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -169,7 +169,7 @@ serve(async (req) => {
 
     // Clean up expired subscriptions
     if (failedEndpoints.length > 0) {
-      await serviceClient.from('push_subscriptions').delete().in('endpoint', failedEndpoints);
+      await serviceClient.from('mfc_push_subscriptions').delete().in('endpoint', failedEndpoints);
     }
 
     return new Response(JSON.stringify({ sent, failed, total: subscriptions.length }), {

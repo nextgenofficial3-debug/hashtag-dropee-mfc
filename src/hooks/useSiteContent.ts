@@ -12,6 +12,7 @@ export interface SiteContent {
   phone_1: string | null;
   phone_2: string | null;
   map_embed_url: string | null;
+  directions_url: string | null;
   image_url: string | null;
   updated_at: string;
 }
@@ -22,7 +23,7 @@ export const useSiteContent = (section?: 'about' | 'contact') => {
     queryFn: async () => {
       if (section) {
         const { data, error } = await supabase
-          .from('site_content')
+          .from('mfc_site_content')
           .select('*')
           .eq('section', section)
           .single();
@@ -32,7 +33,7 @@ export const useSiteContent = (section?: 'about' | 'contact') => {
       }
       
       const { data, error } = await supabase
-        .from('site_content')
+        .from('mfc_site_content')
         .select('*');
       
       if (error) throw error;
@@ -53,7 +54,7 @@ export const useUpdateSiteContent = () => {
       updates: Partial<Omit<SiteContent, 'id' | 'section' | 'updated_at'>> 
     }) => {
       const { data, error } = await supabase
-        .from('site_content')
+        .from('mfc_site_content')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('section', section)
         .select()

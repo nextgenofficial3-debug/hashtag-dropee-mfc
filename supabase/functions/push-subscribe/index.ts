@@ -19,7 +19,7 @@ serve(async (req) => {
     if (req.method === 'GET') {
       // Return existing VAPID public key
       const { data } = await supabase
-        .from('vapid_keys')
+        .from('mfc_vapid_keys')
         .select('public_key')
         .limit(1)
         .single();
@@ -45,7 +45,7 @@ serve(async (req) => {
       const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyRaw)))
         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-      await supabase.from('vapid_keys').insert({
+      await supabase.from('mfc_vapid_keys').insert({
         public_key: publicKeyBase64,
         private_key: privateKeyBase64,
       });
@@ -66,7 +66,7 @@ serve(async (req) => {
         });
       }
 
-      const { error } = await supabase.from('push_subscriptions').upsert({
+      const { error } = await supabase.from('mfc_push_subscriptions').upsert({
         endpoint: subscription.endpoint,
         p256dh: subscription.keys.p256dh,
         auth: subscription.keys.auth,

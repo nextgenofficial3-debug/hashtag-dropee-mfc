@@ -104,7 +104,7 @@ const ReviewsSection: React.FC = () => {
     queryKey: ['approved-reviews'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('reviews')
+        .from('mfc_reviews')
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -125,7 +125,7 @@ const ReviewsSection: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('reviews').insert({
+      const { error } = await supabase.from('mfc_reviews').insert({
         customer_name: name.trim(),
         rating,
         review_text: reviewText.trim(),

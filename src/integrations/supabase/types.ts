@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -10,38 +10,340 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
-      api_keys: {
+      agent_availability: {
         Row: {
-          created_at: string
-          created_by: string
+          agent_id: string
           id: string
-          is_active: boolean | null
-          key: string
-          name: string
+          last_seen: string | null
+          status: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          created_at?: string
-          created_by: string
+          agent_id: string
           id?: string
-          is_active?: boolean | null
-          key?: string
-          name: string
+          last_seen?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          created_at?: string
-          created_by?: string
+          agent_id?: string
           id?: string
-          is_active?: boolean | null
-          key?: string
+          last_seen?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_availability_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_order_responses: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          order_id: string
+          proposed_fee: number | null
+          reason: string | null
+          response_type: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          order_id: string
+          proposed_fee?: number | null
+          reason?: string | null
+          response_type: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          proposed_fee?: number | null
+          reason?: string | null
+          response_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_order_responses_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_order_responses_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address: string | null
+          agent_user_id: string
+          created_at: string
+          email: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          notes: string | null
+          phone: string | null
+          plus_code: string | null
+          total_orders: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          agent_user_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          plus_code?: string | null
+          total_orders?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          agent_user_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string
+          notes?: string | null
+          phone?: string | null
+          plus_code?: string | null
+          total_orders?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
-      categories: {
+      delivery_agents: {
+        Row: {
+          agent_code: string
+          avatar_url: string | null
+          average_rating: number | null
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_verified: boolean
+          phone: string | null
+          total_deliveries: number | null
+          total_earnings: number | null
+          updated_at: string
+          user_id: string
+          vehicle: string
+        }
+        Insert: {
+          agent_code: string
+          avatar_url?: string | null
+          average_rating?: number | null
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          is_verified?: boolean
+          phone?: string | null
+          total_deliveries?: number | null
+          total_earnings?: number | null
+          updated_at?: string
+          user_id: string
+          vehicle?: string
+        }
+        Update: {
+          agent_code?: string
+          avatar_url?: string | null
+          average_rating?: number | null
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_verified?: boolean
+          phone?: string | null
+          total_deliveries?: number | null
+          total_earnings?: number | null
+          updated_at?: string
+          user_id?: string
+          vehicle?: string
+        }
+        Relationships: []
+      }
+      delivery_orders: {
+        Row: {
+          agent_id: string | null
+          agent_user_id: string | null
+          base_fee: number | null
+          created_at: string
+          customer_name: string
+          customer_phone: string | null
+          delivery_address: string
+          delivery_lat: number | null
+          delivery_lng: number | null
+          distance_km: number | null
+          distance_surcharge: number | null
+          fragility_surcharge: number | null
+          id: string
+          is_fragile: boolean | null
+          order_code: string
+          package_description: string | null
+          package_weight_kg: number | null
+          pickup_address: string
+          pickup_lat: number | null
+          pickup_lng: number | null
+          plus_code: string | null
+          proof_photo_url: string | null
+          special_instructions: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          total_fee: number | null
+          updated_at: string
+          urgency_bonus: number | null
+          weather_adjustment: number | null
+          weight_surcharge: number | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_user_id?: string | null
+          base_fee?: number | null
+          created_at?: string
+          customer_name: string
+          customer_phone?: string | null
+          delivery_address: string
+          delivery_lat?: number | null
+          delivery_lng?: number | null
+          distance_km?: number | null
+          distance_surcharge?: number | null
+          fragility_surcharge?: number | null
+          id?: string
+          is_fragile?: boolean | null
+          order_code: string
+          package_description?: string | null
+          package_weight_kg?: number | null
+          pickup_address: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          plus_code?: string | null
+          proof_photo_url?: string | null
+          special_instructions?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          total_fee?: number | null
+          updated_at?: string
+          urgency_bonus?: number | null
+          weather_adjustment?: number | null
+          weight_surcharge?: number | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_user_id?: string | null
+          base_fee?: number | null
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string | null
+          delivery_address?: string
+          delivery_lat?: number | null
+          delivery_lng?: number | null
+          distance_km?: number | null
+          distance_surcharge?: number | null
+          fragility_surcharge?: number | null
+          id?: string
+          is_fragile?: boolean | null
+          order_code?: string
+          package_description?: string | null
+          package_weight_kg?: number | null
+          pickup_address?: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          plus_code?: string | null
+          proof_photo_url?: string | null
+          special_instructions?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          total_fee?: number | null
+          updated_at?: string
+          urgency_bonus?: number | null
+          weather_adjustment?: number | null
+          weight_surcharge?: number | null
+        }
+        Relationships: []
+      }
+      delivery_tracking: {
+        Row: {
+          agent_id: string
+          heading: number | null
+          id: string
+          latitude: number
+          longitude: number
+          order_id: string
+          recorded_at: string
+          speed: number | null
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          heading?: number | null
+          id?: string
+          latitude: number
+          longitude: number
+          order_id: string
+          recorded_at?: string
+          speed?: number | null
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          heading?: number | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          order_id?: string
+          recorded_at?: string
+          speed?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_tracking_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_tracking_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mfc_categories: {
         Row: {
           created_at: string
           display_order: number | null
@@ -62,7 +364,43 @@ export type Database = {
         }
         Relationships: []
       }
-      notification_history: {
+      mfc_coupons: {
+        Row: {
+          code: string
+          created_at: string
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          min_order_amount: number | null
+          used_count: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_type?: string
+          discount_value: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_order_amount?: number | null
+          used_count?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_order_amount?: number | null
+          used_count?: number | null
+        }
+        Relationships: []
+      }
+      mfc_notification_history: {
         Row: {
           body: string
           created_at: string | null
@@ -89,7 +427,7 @@ export type Database = {
         }
         Relationships: []
       }
-      orders: {
+      mfc_orders: {
         Row: {
           created_at: string
           customer_address: string
@@ -137,7 +475,7 @@ export type Database = {
         }
         Relationships: []
       }
-      products: {
+      mfc_products: {
         Row: {
           category_id: string | null
           created_at: string
@@ -179,15 +517,15 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "products_category_id_fkey"
+            foreignKeyName: "mfc_products_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: "categories"
+            referencedRelation: "mfc_categories"
             referencedColumns: ["id"]
           },
         ]
       }
-      promotions: {
+      mfc_promotions: {
         Row: {
           applies_to_all: boolean | null
           banner_image: string | null
@@ -229,7 +567,7 @@ export type Database = {
         }
         Relationships: []
       }
-      push_subscriptions: {
+      mfc_push_subscriptions: {
         Row: {
           auth: string
           created_at: string
@@ -256,7 +594,7 @@ export type Database = {
         }
         Relationships: []
       }
-      reviews: {
+      mfc_reviews: {
         Row: {
           created_at: string
           customer_name: string
@@ -283,7 +621,7 @@ export type Database = {
         }
         Relationships: []
       }
-      site_content: {
+      mfc_site_content: {
         Row: {
           address: string | null
           content: string
@@ -328,7 +666,7 @@ export type Database = {
         }
         Relationships: []
       }
-      store_settings: {
+      mfc_store_settings: {
         Row: {
           admin_password_hash: string
           average_rating: string | null
@@ -350,7 +688,7 @@ export type Database = {
           years_running: string | null
         }
         Insert: {
-          admin_password_hash: string
+          admin_password_hash?: string
           average_rating?: string | null
           base_delivery_fee?: number
           closing_time?: string | null
@@ -391,25 +729,7 @@ export type Database = {
         }
         Relationships: []
       }
-      user_roles: {
-        Row: {
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
-      vapid_keys: {
+      mfc_vapid_keys: {
         Row: {
           created_at: string
           id: string
@@ -430,21 +750,269 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string | null
+          metadata: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          metadata?: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          metadata?: Json | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      order_status_timeline: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_timeline_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          agent_id: string | null
+          agent_user_id: string | null
+          created_at: string
+          customer_address: string
+          customer_name: string
+          customer_phone: string
+          discount: number
+          fee: number | null
+          hub_order_id: string | null
+          id: string
+          items: Json
+          payment_method: string
+          pickup_address: string | null
+          plus_code: string | null
+          proof_photo_url: string | null
+          special_instructions: string | null
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_user_id?: string | null
+          created_at?: string
+          customer_address: string
+          customer_name: string
+          customer_phone: string
+          discount?: number
+          fee?: number | null
+          hub_order_id?: string | null
+          id?: string
+          items?: Json
+          payment_method?: string
+          pickup_address?: string | null
+          plus_code?: string | null
+          proof_photo_url?: string | null
+          special_instructions?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_user_id?: string | null
+          created_at?: string
+          customer_address?: string
+          customer_name?: string
+          customer_phone?: string
+          discount?: number
+          fee?: number | null
+          hub_order_id?: string | null
+          id?: string
+          items?: Json
+          payment_method?: string
+          pickup_address?: string | null
+          plus_code?: string | null
+          proof_photo_url?: string | null
+          special_instructions?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      role_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          granted_at: string | null
+          id: string
+          invited_by: string | null
+          notes: string | null
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          granted_at?: string | null
+          id?: string
+          invited_by?: string | null
+          notes?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          granted_at?: string | null
+          id?: string
+          invited_by?: string | null
+          notes?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vendors: {
+        Row: {
+          address: string | null
+          agent_user_id: string
+          contact_person: string | null
+          created_at: string
+          email: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          notes: string | null
+          phone: string | null
+          total_orders: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          agent_user_id: string
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          total_orders?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          agent_user_id?: string
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          total_orders?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      has_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | { Args: { _role: string; _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "moderator" | "agent" | "user" | "super_admin"
+      order_status:
+        | "pending_assignment"
+        | "accepted"
+        | "en_route_pickup"
+        | "arrived_pickup"
+        | "picked_up"
+        | "in_transit"
+        | "arrived_delivery"
+        | "delivered"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -572,7 +1140,19 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "moderator", "agent", "user", "super_admin"],
+      order_status: [
+        "pending_assignment",
+        "accepted",
+        "en_route_pickup",
+        "arrived_pickup",
+        "picked_up",
+        "in_transit",
+        "arrived_delivery",
+        "delivered",
+        "cancelled",
+      ],
     },
   },
 } as const
+

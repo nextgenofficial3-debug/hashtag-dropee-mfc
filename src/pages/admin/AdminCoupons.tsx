@@ -40,7 +40,7 @@ const AdminCoupons: React.FC = () => {
   const { data: coupons, isLoading } = useQuery({
     queryKey: ['coupons'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('coupons' as any).select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('mfc_coupons').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data as unknown as Coupon[];
     },
@@ -67,10 +67,10 @@ const AdminCoupons: React.FC = () => {
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       if (selected) {
-        const { error } = await supabase.from('coupons' as any).update(data).eq('id', selected.id);
+        const { error } = await supabase.from('mfc_coupons').update(data).eq('id', selected.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('coupons' as any).insert(data);
+        const { error } = await supabase.from('mfc_coupons').insert(data);
         if (error) throw error;
       }
     },
@@ -85,7 +85,7 @@ const AdminCoupons: React.FC = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('coupons' as any).delete().eq('id', id);
+      const { error } = await supabase.from('mfc_coupons').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -25,8 +25,8 @@ const AdminNotifications: React.FC = () => {
   const { data: history, isLoading } = useQuery({
     queryKey: ['notification-history'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from('notification_history')
+      const { data, error } = await supabase
+        .from('mfc_notification_history')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
@@ -39,7 +39,7 @@ const AdminNotifications: React.FC = () => {
     queryKey: ['subscriber-count'],
     queryFn: async () => {
       const { count, error } = await supabase
-        .from('push_subscriptions')
+        .from('mfc_push_subscriptions')
         .select('*', { count: 'exact', head: true });
       if (error) throw error;
       return count || 0;
@@ -56,18 +56,13 @@ const AdminNotifications: React.FC = () => {
     try {
       const result = await sendNotification(title, body);
 
-      // Log to history + user_notifications for in-app viewing
+      // Log to notification history
       const { data: { session } } = await supabase.auth.getSession();
-      await Promise.all([
-        (supabase as any).from('notification_history').insert({
-          title, body,
-          sent_by: session?.user?.id || null,
-          sent_count: result?.sent || 0,
-        }),
-        (supabase as any).from('user_notifications').insert({
-          title, body, type: 'promo',
-        }),
-      ]);
+      await supabase.from('mfc_notification_history').insert({
+        title, body,
+        sent_by: session?.user?.id || null,
+        sent_count: result?.sent || 0,
+      });
 
       queryClient.invalidateQueries({ queryKey: ['notification-history'] });
       setTitle('');

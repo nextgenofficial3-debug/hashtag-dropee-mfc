@@ -27,7 +27,7 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       const { data } = await supabase
-        .from('orders')
+        .from('mfc_orders')
         .select('id, total, status, created_at')
         .order('created_at', { ascending: false });
       setOrders((data as Order[]) || []);

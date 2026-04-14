@@ -49,7 +49,7 @@ export function usePushNotifications() {
         return;
       }
 
-      // Get VAPID public key
+      // Get VAPID public key from the shared Supabase project edge function
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/push-subscribe`,
@@ -69,7 +69,7 @@ export function usePushNotifications() {
         applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
       });
 
-      // Save subscription to backend
+      // Save subscription to shared backend (mfc_push_subscriptions)
       const saveRes = await fetch(
         `https://${projectId}.supabase.co/functions/v1/push-subscribe`,
         {
@@ -101,7 +101,7 @@ export function usePushNotifications() {
         await subscription.unsubscribe();
 
         await supabase
-          .from('push_subscriptions')
+          .from('mfc_push_subscriptions')
           .delete()
           .eq('endpoint', subscription.endpoint);
       }
