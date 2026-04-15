@@ -35,18 +35,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const handleAuthChange = async (session: Session | null) => {
+      setSession(session);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+
+      if (currentUser) {
+        await checkAdminStatus(currentUser.email);
+      } else {
+        setRole(null);
+        setLoading(false);
+      }
+    };
+
     // Initial fetch
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
-        const currentUser = session?.user ?? null;
-        setSession(session);
-        setUser(currentUser);
-        if (currentUser) {
-          checkAdminStatus(currentUser.email);
-        } else {
-          setRole(null);
-          setLoading(false);
-        }
+        handleAuthChange(session);
       })
       .catch((err) => {
         console.error("Session fetch failed", err);
@@ -56,15 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        const currentUser = session?.user ?? null;
-        setSession(session);
-        setUser(currentUser);
-        if (currentUser) {
-          await checkAdminStatus(currentUser.email);
-        } else {
-          setRole(null);
-          setLoading(false);
-        }
+        await handleAuthChange(session);
       }
     );
 
@@ -74,6 +71,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const checkAdminStatus = async (email: string | undefined) => {
+    // Super admin bypass
+    if (email === "hashtagdropee@gmail.com") {
+      setRole("super_admin");
+      setLoading(false);
+      return;
+    }
+
     if (!email) {
       setRole(null);
       setLoading(false);
