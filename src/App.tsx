@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import TopBar from "./components/layout/TopBar";
 import BottomNavigation from "./components/layout/BottomNavigation";
 import AdminLayout from "./components/admin/AdminLayout";
+import { DownloadAppPrompt } from "./components/layout/DownloadAppPrompt";
 
 // Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -93,6 +94,7 @@ const App = () => (
               } 
             />
           </Routes>
+          <DownloadAppPrompt />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
