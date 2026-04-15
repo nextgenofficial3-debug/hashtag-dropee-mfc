@@ -11,11 +11,8 @@ export default function AdminOrders() {
   const fetchOrders = async () => {
     try {
       const { data, error } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          user_addresses ( full_address, label )
-        `)
+        .from("mfc_orders")
+        .select(`*`)
         .order("created_at", { ascending: false });
         
       if (error) throw error;
@@ -33,7 +30,7 @@ export default function AdminOrders() {
     // Set up Realtime subscription
     const channel = supabase
       .channel('orders_channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mfc_orders' }, () => {
          fetchOrders(); // refresh on change
       })
       .subscribe();
@@ -46,12 +43,12 @@ export default function AdminOrders() {
   const updateStatus = async (orderId: string, newStatus: string) => {
     try {
       const { error } = await supabase
-        .from("orders")
+        .from("mfc_orders")
         .update({ status: newStatus })
         .eq("id", orderId);
         
       if (error) throw error;
-      toast.success(`Order ${orderId.slice(0,6)}... status updated to ${newStatus}`);
+      toast.success(`Order status updated to ${newStatus}`);
     } catch (err: any) {
       toast.error("Failed to update status");
     }
@@ -74,6 +71,7 @@ export default function AdminOrders() {
             <thead className="bg-zinc-950/50 text-zinc-400 text-xs uppercase border-b border-zinc-800">
               <tr>
                 <th className="px-6 py-4 font-semibold">Order ID & Date</th>
+                <th className="px-6 py-4 font-semibold">Customer</th>
                 <th className="px-6 py-4 font-semibold">Address</th>
                 <th className="px-6 py-4 font-semibold">Total</th>
                 <th className="px-6 py-4 font-semibold">Status</th>
@@ -82,18 +80,22 @@ export default function AdminOrders() {
             </thead>
             <tbody className="divide-y divide-zinc-800">
               {orders.length === 0 ? (
-                 <tr><td colSpan={5} className="text-center py-8 text-zinc-500">No orders found.</td></tr>
+                 <tr><td colSpan={6} className="text-center py-8 text-zinc-500">No orders found.</td></tr>
               ) : orders.map((order) => (
                 <tr key={order.id} className="hover:bg-zinc-800/50 transition-colors">
                   <td className="px-6 py-4">
                      <p className="font-bold text-zinc-200">#{order.id.slice(0, 8)}</p>
                      <p className="text-xs text-zinc-500 mt-1">{new Date(order.created_at).toLocaleString()}</p>
                   </td>
+                  <td className="px-6 py-4">
+                    <p className="font-medium text-zinc-200">{order.customer_name}</p>
+                    <p className="text-xs text-zinc-500">{order.customer_phone}</p>
+                  </td>
                   <td className="px-6 py-4 max-w-[200px] truncate">
-                     {order.user_addresses?.full_address || order.delivery_address || 'No address provided'}
+                     {order.customer_address}
                   </td>
                   <td className="px-6 py-4 font-bold text-green-400">
-                    ₹{order.total_amount?.toFixed(2)}
+                    ₹{order.total?.toFixed(2)}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 flex w-max text-xs font-bold rounded-md uppercase tracking-wider ${

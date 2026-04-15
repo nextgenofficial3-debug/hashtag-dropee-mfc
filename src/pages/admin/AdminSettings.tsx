@@ -1,43 +1,45 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Save, Store, Phone, MapPin } from "lucide-react";
+import { Loader2, Save, Store, Phone, MapPin, Image as ImageIcon, IndianRupee, Clock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState<any>({
-    is_accepting_orders: false,
-    header_image_url: "",
-    contact_phone: "",
-    address: ""
-  });
+  const [settings, setSettings] = useState<any>(null);
 
   const fetchSettings = async () => {
     try {
       const { data, error } = await supabase
-        .from("mfc_settings")
+        .from("mfc_store_settings")
         .select("*")
         .single();
         
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 is no rows
+      if (error && error.code !== 'PGRST116') throw error;
       
       if (data) {
-         setSettings(data);
+        setSettings(data);
       } else {
-         // Create default row if doesn't exist
-         const defaultSettings = { 
-            id: 'default', 
-            is_accepting_orders: true,
-            header_image_url: "https://images.unsplash.com/photo-1514933651103-005eec06c04b",
-            contact_phone: "+91 9999999999",
-            address: "MFC, Ukhrul, Manipur"
-         };
-         await supabase.from("mfc_settings").insert(defaultSettings);
-         setSettings(defaultSettings);
+        const defaultSettings = { 
+          brand_name: 'MFC Food',
+          is_open: true,
+          use_scheduled_hours: false,
+          packaging_fee: 60,
+          base_delivery_fee: 100,
+          per_km_delivery_fee: 50,
+        };
+        const { data: newData, error: insertError } = await supabase
+          .from("mfc_store_settings")
+          .insert(defaultSettings)
+          .select()
+          .single();
+        
+        if (insertError) throw insertError;
+        setSettings(newData);
       }
     } catch (err: any) {
       toast.error("Failed to load settings: " + err.message);
@@ -54,14 +56,20 @@ export default function AdminSettings() {
     setSaving(true);
     try {
       const { error } = await supabase
-        .from("mfc_settings")
+        .from("mfc_store_settings")
         .update({
-          is_accepting_orders: settings.is_accepting_orders,
-          header_image_url: settings.header_image_url,
-          contact_phone: settings.contact_phone,
-          address: settings.address
+          brand_name: settings.brand_name,
+          brand_logo_url: settings.brand_logo_url,
+          is_open: settings.is_open,
+          use_scheduled_hours: settings.use_scheduled_hours,
+          whatsapp_primary: settings.whatsapp_primary,
+          whatsapp_secondary: settings.whatsapp_secondary,
+          packaging_fee: settings.packaging_fee,
+          base_delivery_fee: settings.base_delivery_fee,
+          per_km_delivery_fee: settings.per_km_delivery_fee,
+          working_hours: settings.working_hours,
         })
-        .eq("id", settings.id || 'default');
+        .eq("id", settings.id);
         
       if (error) throw error;
       toast.success("Settings saved successfully");
@@ -73,86 +81,144 @@ export default function AdminSettings() {
   };
 
   if (loading) {
-     return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin w-8 text-zinc-500" /></div>;
+    return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin w-8 text-zinc-500" /></div>;
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-4xl pb-20">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Store Settings</h1>
-        <p className="text-zinc-400">Manage your restaurant's global settings.</p>
+        <p className="text-zinc-400">Manage branding, operations, and delivery configuration.</p>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6 shadow-sm">
-         <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-               <div className={`p-2 rounded-lg ${settings.is_accepting_orders ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                  <Store size={20} />
-               </div>
-               <div>
-                  <h3 className="font-medium text-zinc-200">Accepting Orders</h3>
-                  <p className="text-sm text-zinc-500">Toggle whether customers can place new orders.</p>
-               </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* OPERATIONAL STATUS */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
+            <Store size={20} className="text-[#FF5A00]" /> Operations
+          </h2>
+          
+          <div className="flex items-center justify-between p-4 bg-zinc-950 rounded-xl border border-zinc-800">
+            <div>
+              <h3 className="font-medium text-zinc-200">Manual Open/Close</h3>
+              <p className="text-xs text-zinc-500">Forcefully open or close the store now.</p>
             </div>
             <Switch 
-               checked={settings.is_accepting_orders} 
-               onCheckedChange={(val) => setSettings({...settings, is_accepting_orders: val})} 
+              checked={settings.is_open} 
+              onCheckedChange={(val) => setSettings({...settings, is_open: val})} 
             />
-         </div>
+          </div>
 
-         <div className="space-y-4 pt-4 border-t border-zinc-800">
-            <div className="space-y-2">
-               <label className="text-sm font-medium text-zinc-300">Header Image URL</label>
-               <Input 
-                  value={settings.header_image_url || ''} 
-                  onChange={(e) => setSettings({...settings, header_image_url: e.target.value})} 
-                  placeholder="https://images.unsplash.com/..." 
-                  className="bg-zinc-950 border-zinc-800 text-zinc-200 focus-visible:ring-[#FF5A00]" 
-               />
-               <p className="text-xs text-zinc-500">This image appears as the hero banner on the home page.</p>
-               
-               {settings.header_image_url && (
-                  <div className="mt-2 h-32 w-full rounded-xl overflow-hidden bg-zinc-800 border border-zinc-700">
-                     <img src={settings.header_image_url} alt="Header Preview" className="w-full h-full object-cover" />
-                  </div>
-               )}
+          <div className="flex items-center justify-between p-4 bg-zinc-950 rounded-xl border border-zinc-800">
+            <div>
+              <h3 className="font-medium text-zinc-200">Scheduled Hours</h3>
+              <p className="text-xs text-zinc-500">Automatically open/close based on time.</p>
             </div>
+            <Switch 
+              checked={settings.use_scheduled_hours} 
+              onCheckedChange={(val) => setSettings({...settings, use_scheduled_hours: val})} 
+            />
+          </div>
+        </div>
 
-            <div className="space-y-2">
-               <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-                  <Phone size={14} className="text-zinc-400" /> WhatsApp Number
-               </label>
-               <Input 
-                  value={settings.contact_phone || ''} 
-                  onChange={(e) => setSettings({...settings, contact_phone: e.target.value})} 
-                  placeholder="+91 9999999999" 
-                  className="bg-zinc-950 border-zinc-800 text-zinc-200 focus-visible:ring-[#FF5A00]" 
-               />
+        {/* BRANDING */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
+            <ImageIcon size={20} className="text-[#FF5A00]" /> Branding
+          </h2>
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="brandName" className="text-zinc-400">Brand Name</Label>
+              <Input 
+                id="brandName"
+                value={settings.brand_name || ''} 
+                onChange={(e) => setSettings({...settings, brand_name: e.target.value})} 
+                className="bg-zinc-950 border-zinc-800"
+              />
             </div>
-
-            <div className="space-y-2">
-               <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-                  <MapPin size={14} className="text-zinc-400" /> Address
-               </label>
-               <Input 
-                  value={settings.address || ''} 
-                  onChange={(e) => setSettings({...settings, address: e.target.value})} 
-                  placeholder="Wino Bazaar, Ukhrul" 
-                  className="bg-zinc-950 border-zinc-800 text-zinc-200 focus-visible:ring-[#FF5A00]" 
-               />
+            <div className="grid gap-2">
+              <Label htmlFor="logoUrl" className="text-zinc-400">Logo Image URL</Label>
+              <Input 
+                id="logoUrl"
+                value={settings.brand_logo_url || ''} 
+                onChange={(e) => setSettings({...settings, brand_logo_url: e.target.value})} 
+                className="bg-zinc-950 border-zinc-800"
+              />
             </div>
-         </div>
+          </div>
+        </div>
 
-         <div className="pt-4 flex justify-end">
-            <Button 
-               onClick={handleSave} 
-               disabled={saving}
-               className="bg-[#FF5A00] hover:bg-[#e04f00] text-white px-6 w-full sm:w-auto"
-            >
-               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-               Save Settings
-            </Button>
-         </div>
+        {/* DELIVERY PRICING */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
+            <IndianRupee size={20} className="text-[#FF5A00]" /> Delivery Pricing
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label className="text-zinc-400 text-xs uppercase letter-spacing-wider">Base Fee</Label>
+              <Input 
+                type="number"
+                value={settings.base_delivery_fee} 
+                onChange={(e) => setSettings({...settings, base_delivery_fee: Number(e.target.value)})} 
+                className="bg-zinc-950 border-zinc-800"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label className="text-zinc-400 text-xs uppercase letter-spacing-wider">Per KM Fee</Label>
+              <Input 
+                type="number"
+                value={settings.per_km_delivery_fee} 
+                onChange={(e) => setSettings({...settings, per_km_delivery_fee: Number(e.target.value)})} 
+                className="bg-zinc-950 border-zinc-800"
+              />
+            </div>
+            <div className="grid gap-2 col-span-2">
+              <Label className="text-zinc-400 text-xs uppercase letter-spacing-wider">Packaging Fee</Label>
+              <Input 
+                type="number"
+                value={settings.packaging_fee} 
+                onChange={(e) => setSettings({...settings, packaging_fee: Number(e.target.value)})} 
+                className="bg-zinc-950 border-zinc-800"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* SUPPORT CONTACTS */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
+            <Phone size={20} className="text-[#FF5A00]" /> Support Contacts
+          </h2>
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label className="text-zinc-400">WhatsApp Primary</Label>
+              <Input 
+                value={settings.whatsapp_primary || ''} 
+                onChange={(e) => setSettings({...settings, whatsapp_primary: e.target.value})} 
+                className="bg-zinc-950 border-zinc-800"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label className="text-zinc-400">WhatsApp Secondary</Label>
+              <Input 
+                value={settings.whatsapp_secondary || ''} 
+                onChange={(e) => setSettings({...settings, whatsapp_secondary: e.target.value})} 
+                className="bg-zinc-950 border-zinc-800"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="sticky bottom-6 flex justify-end">
+        <Button 
+          onClick={handleSave} 
+          disabled={saving}
+          className="bg-[#FF5A00] hover:bg-[#e04f00] text-white px-10 h-14 rounded-2xl shadow-xl shadow-orange-950/20 text-lg font-bold"
+        >
+          {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+          Save All Changes
+        </Button>
       </div>
     </div>
   );

@@ -39,13 +39,13 @@ export function ReservationFlow({ isOpen, onClose }: { isOpen: boolean; onClose:
       const [hours, minutes] = time.split(':').map(Number);
       reservationTime.setHours(hours, minutes, 0, 0);
 
-      const { error } = await supabase.from('food_reservations').insert({
+      const { error } = await supabase.from('mfc_reservations').insert({
         user_id: user.id,
         reservation_time: reservationTime.toISOString(),
-        guest_count: guests,
+        people_count: guests,
         table_type: tableType,
         special_requests: specialRequest,
-        reservation_status: "pending",
+        status: "pending",
       });
 
       if (error) throw error;

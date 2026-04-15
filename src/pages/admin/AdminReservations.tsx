@@ -11,11 +11,8 @@ export default function AdminReservations() {
   const fetchReservations = async () => {
     try {
       const { data, error } = await supabase
-        .from("food_reservations")
-        .select(`
-          *,
-          user:user_id ( id )
-        `)
+        .from("mfc_reservations")
+        .select(`*`)
         .order("reservation_time", { ascending: true });
         
       if (error) throw error;
@@ -32,7 +29,7 @@ export default function AdminReservations() {
 
     const channel = supabase
       .channel('reservations_channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'food_reservations' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mfc_reservations' }, () => {
          fetchReservations(); 
       })
       .subscribe();
@@ -45,8 +42,8 @@ export default function AdminReservations() {
   const updateStatus = async (id: string, newStatus: string) => {
     try {
       const { error } = await supabase
-        .from("food_reservations")
-        .update({ reservation_status: newStatus })
+        .from("mfc_reservations")
+        .update({ status: newStatus })
         .eq("id", id);
         
       if (error) throw error;
@@ -81,18 +78,18 @@ export default function AdminReservations() {
                     <span className="font-semibold">{new Date(res.reservation_time).toLocaleString()}</span>
                   </div>
                   <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wider ${
-                    res.reservation_status === 'pending' ? 'bg-orange-500/20 text-orange-400' :
-                    res.reservation_status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
-                    res.reservation_status === 'completed' ? 'bg-blue-500/20 text-blue-400' :
+                    res.status === 'pending' ? 'bg-orange-500/20 text-orange-400' :
+                    res.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
+                    res.status === 'completed' ? 'bg-blue-500/20 text-blue-400' :
                     'bg-red-500/20 text-red-400'
                   }`}>
-                    {res.reservation_status}
+                    {res.status}
                   </span>
                 </div>
                 
                 <h3 className="font-bold text-lg text-zinc-100 flex items-center gap-2">
                   <Users className="w-5 h-5 text-zinc-400" />
-                  {res.guest_count} Guests
+                  {res.people_count} Guests
                 </h3>
                 
                 <div className="mt-4 space-y-2 text-sm text-zinc-400">
@@ -103,7 +100,7 @@ export default function AdminReservations() {
                 </div>
               </div>
 
-              {res.reservation_status === 'pending' && (
+              {res.status === 'pending' && (
                 <div className="flex items-center gap-2 mt-6 pt-4 border-t border-zinc-800">
                   <Button className="flex-1 bg-green-500 text-white hover:bg-green-600 font-bold" onClick={() => updateStatus(res.id, 'confirmed')}>
                     <Check className="w-4 h-4 mr-2" /> Confirm
@@ -113,7 +110,7 @@ export default function AdminReservations() {
                   </Button>
                 </div>
               )}
-               {res.reservation_status === 'confirmed' && (
+               {res.status === 'confirmed' && (
                 <div className="flex items-center gap-2 mt-6 pt-4 border-t border-zinc-800">
                   <Button className="w-full bg-blue-500 text-white hover:bg-blue-600 font-bold" onClick={() => updateStatus(res.id, 'completed')}>
                     Mark Completed

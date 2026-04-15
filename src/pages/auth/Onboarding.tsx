@@ -54,12 +54,12 @@ export default function Onboarding() {
 
       // 2. Save address map pin
       if (formData.lat && formData.lng) {
-        await supabase.from("user_addresses").insert({
+        await supabase.from("mfc_user_addresses").insert({
           user_id: user.id,
-          label: "Home",
+          address_type: "Home",
           full_address: formData.address,
-          latitude: formData.lat,
-          longitude: formData.lng,
+          lat: formData.lat,
+          lng: formData.lng,
           is_default: true,
         });
       }

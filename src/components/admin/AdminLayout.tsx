@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Receipt, CalendarClock, Settings, Menu, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, Receipt, CalendarClock, Settings, Menu, ShieldAlert, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -12,6 +12,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Orders", path: "/admin/orders", icon: Receipt },
     { name: "Reservations", path: "/admin/reservations", icon: CalendarClock },
     { name: "Menu", path: "/admin/menu", icon: Menu },
+    { name: "Whitelist", path: "/admin/whitelist", icon: ShieldCheck },
     { name: "Settings", path: "/admin/settings", icon: Settings },
   ];
 

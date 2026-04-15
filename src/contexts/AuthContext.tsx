@@ -9,6 +9,7 @@ interface AuthContextType {
   session: Session | null;
   role: UserRole | null;
   isAdmin: boolean;
+  isOnboarded: boolean;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   role: null,
   isAdmin: false,
+  isOnboarded: false,
   loading: true,
   signInWithGoogle: async () => {},
   signOut: async () => {},
@@ -35,10 +37,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Initial fetch
     supabase.auth.getSession().then(({ data: { session } }) => {
+      const currentUser = session?.user ?? null;
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
+      setUser(currentUser);
+      if (currentUser) {
+        checkAdminStatus(currentUser.email);
       } else {
         setRole(null);
         setLoading(false);
@@ -48,10 +51,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        const currentUser = session?.user ?? null;
         setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchUserRole(session.user.id);
+        setUser(currentUser);
+        if (currentUser) {
+          await checkAdminStatus(currentUser.email);
         } else {
           setRole(null);
           setLoading(false);
@@ -64,23 +68,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const fetchUserRole = async (userId: string) => {
+  const checkAdminStatus = async (email: string | undefined) => {
+    if (!email) {
+      setRole(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
-        .from("user_roles")
+        .from("mfc_admin_whitelist")
         .select("role")
-        .eq("user_id", userId)
+        .eq("email", email)
         .single();
       
       if (data && !error) {
         setRole(data.role as UserRole);
       } else {
-        // Fallback to user
-        setRole("user");
+        setRole(null);
       }
     } catch (err) {
-      console.error("Failed to fetch role", err);
-      setRole("user");
+      console.error("Failed to fetch admin status", err);
+      setRole(null);
     } finally {
       setLoading(false);
     }
@@ -90,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin, // Redirect back to home
+        redirectTo: window.location.origin,
       },
     });
   };
@@ -100,9 +109,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = role === "admin" || role === "super_admin";
+  const isOnboarded = !!user?.user_metadata?.onboarded;
 
   return (
-    <AuthContext.Provider value={{ user, session, role, isAdmin, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, isAdmin, isOnboarded, loading, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -3,18 +3,19 @@ import { Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function TopBar() {
-  const [storeName, setStoreName] = useState("FoodApp");
+  const [brandName, setBrandName] = useState("MFC Food");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   
   useEffect(() => {
-    // Fetch store name from settings
     const fetchSettings = async () => {
       const { data, error } = await supabase
         .from('mfc_store_settings')
-        .select('store_name')
+        .select('brand_name, brand_logo_url')
         .single();
       
-      if (data && !error && data.store_name) {
-        setStoreName(data.store_name);
+      if (data && !error) {
+        if (data.brand_name) setBrandName(data.brand_name);
+        if (data.brand_logo_url) setLogoUrl(data.brand_logo_url);
       }
     };
     fetchSettings();
@@ -24,11 +25,17 @@ export default function TopBar() {
     <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-xl border-b border-border/40 transition-all duration-300">
       <div className="flex h-14 items-center px-4 max-w-md mx-auto">
         <div className="mr-8 flex items-center space-x-2 flex-1">
-          <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-            <span className="text-primary-foreground font-bold text-lg select-none">F</span>
-          </div>
-          <span className="font-bold sm:inline-block tracking-tight text-lg truncate">
-            {storeName}
+          {logoUrl ? (
+            <img src={logoUrl} alt={brandName} className="w-8 h-8 rounded-lg object-cover" />
+          ) : (
+            <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+              <span className="text-primary-foreground font-bold text-lg select-none">
+                {brandName.charAt(0)}
+              </span>
+            </div>
+          )}
+          <span className="font-bold sm:inline-block tracking-tight text-lg truncate uppercase">
+            {brandName}
           </span>
         </div>
         

@@ -12,21 +12,20 @@ export default function Cart() {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  // Dummy Cart State for UI
+  // Dummy Cart State for UI (In a real app, this would come from a CartContext)
   const [cartItems, setCartItems] = useState<any[]>([
-    { id: 1, name: "Truffle Burger", price: 350, quantity: 2, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=200&auto=format&fit=crop" },
-    { id: 2, name: "Iced Latte", price: 150, quantity: 1, image: "https://images.unsplash.com/photo-1461023058943-07cb1ce8db83?q=80&w=200&auto=format&fit=crop" },
+    { id: 1, name: "MFC Special Burger", price: 350, quantity: 2, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd" },
+    { id: 2, name: "Iced Coffee", price: 150, quantity: 1, image: "https://images.unsplash.com/photo-1461023058943-07cb1ce8db83" },
   ]);
   
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // Address
   const [address, setAddress] = useState("Loading...");
+  const [fees, setFees] = useState({ delivery: 0, packaging: 0 });
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const tax = subtotal * 0.05; // 5% GST
-  const total = subtotal + tax;
+  const total = subtotal + tax + fees.delivery + fees.packaging;
 
   const updateQuantity = (id: number, delta: number) => {
     setCartItems(prev => prev.map(item => {
@@ -47,26 +46,48 @@ export default function Cart() {
       toast.error("Please login to proceed");
       return;
     }
-    // Fetch user address
-    const { data } = await supabase.from('user_addresses').select('full_address').eq('user_id', user.id).eq('is_default', true).single();
+    
+    // 1. Fetch fees
+    const { data: settings } = await supabase.from('mfc_store_settings').select('base_delivery_fee, packaging_fee').single();
+    if (settings) {
+      setFees({
+        delivery: Number(settings.base_delivery_fee),
+        packaging: Number(settings.packaging_fee)
+      });
+    }
+
+    // 2. Fetch user address
+    const { data } = await supabase.from('mfc_user_addresses').select('full_address').eq('user_id', user.id).eq('is_default', true).single();
     if (data) setAddress(data.full_address);
-    else setAddress("No default address set.");
+    else setAddress("No address set. Please update profile.");
     
     setIsCheckoutOpen(true);
   };
 
   const placeOrder = async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      // Simulate order placement
-      await new Promise(r => setTimeout(r, 1500));
+      const { error } = await supabase.from('mfc_orders').insert({
+        customer_name: user.user_metadata?.full_name || 'Guest',
+        customer_phone: user.user_metadata?.phone || '',
+        customer_address: address,
+        items: cartItems,
+        subtotal: subtotal,
+        discount: 0,
+        total: total,
+        payment_method: 'cod',
+        status: 'pending'
+      });
+
+      if (error) throw error;
       
       toast.success("Order Placed Successfully!");
       setCartItems([]);
       setIsCheckoutOpen(false);
       navigate("/profile");
-    } catch (err) {
-      toast.error("Failed to place order");
+    } catch (err: any) {
+      toast.error("Failed to place order: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -80,10 +101,10 @@ export default function Cart() {
         </div>
         <div>
           <h2 className="text-2xl font-bold">Your cart is empty</h2>
-          <p className="text-muted-foreground mt-2">Looks like you haven't added anything yet.</p>
+          <p className="text-muted-foreground mt-2">Time to try our signature MFC Chicken!</p>
         </div>
         <Button asChild className="w-full h-14 rounded-2xl text-base font-semibold">
-          <Link to="/shop">Start Browsing</Link>
+          <Link to="/shop">View Menu</Link>
         </Button>
       </div>
     );
@@ -96,7 +117,7 @@ export default function Cart() {
       <div className="space-y-4">
         {cartItems.map((item) => (
           <div key={item.id} className="flex gap-4 p-3 bg-card border border-border rounded-3xl shadow-sm">
-             <div className="w-20 h-20 rounded-2xl shrink-0 overflow-hidden">
+             <div className="w-20 h-20 rounded-2xl shrink-0 overflow-hidden bg-muted">
                 <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
              </div>
              <div className="flex-1 flex flex-col justify-between py-1">
@@ -136,8 +157,9 @@ export default function Cart() {
           </div>
           <div className="flex justify-between border-t border-border pt-2 mt-2 text-base font-bold text-foreground">
             <span>To Pay</span>
-            <span className="text-primary">₹{total.toFixed(2)}</span>
+            <span className="text-primary">₹{(subtotal + tax).toFixed(2)}*</span>
           </div>
+          <p className="text-[10px] italic mt-1">* Delivery and packaging fees added at checkout</p>
         </div>
       </div>
 
@@ -152,20 +174,35 @@ export default function Cart() {
       <Sheet open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
         <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl pt-10 pb-safe px-0 flex flex-col">
           <SheetHeader className="px-6 mb-4 text-left">
-            <SheetTitle className="text-2xl font-bold">Checkout</SheetTitle>
+            <SheetTitle className="text-2xl font-bold">Checkout Summary</SheetTitle>
           </SheetHeader>
           
           <div className="px-6 flex-1 overflow-y-auto space-y-6 pb-20">
             {/* Delivery Address */}
             <div className="space-y-3">
-              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Delivery Details</h4>
+              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Delivery To</h4>
               <div className="flex items-start gap-4 p-4 rounded-2xl bg-muted/40 border border-border">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <MapPin className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-sm">Delivery Address</p>
+                  <p className="font-semibold text-sm">Default Pin</p>
                   <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{address}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Fees */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Fees & Charges</h4>
+              <div className="p-4 rounded-2xl bg-muted/40 border border-border space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Delivery Fee</span>
+                  <span className="font-bold">₹{fees.delivery}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Packaging Fee</span>
+                  <span className="font-bold">₹{fees.packaging}</span>
                 </div>
               </div>
             </div>
@@ -180,40 +217,22 @@ export default function Cart() {
                     <span className="font-bold">Cash on Delivery</span>
                   </div>
                 </label>
-                <label className="flex items-center justify-between p-4 rounded-2xl border-2 border-border opacity-50 cursor-not-allowed">
-                  <div className="flex items-center gap-3">
-                     <div className="w-5 h-5 rounded-full border-2 border-muted-foreground" />
-                     <span className="font-semibold">UPI / Card</span>
-                  </div>
-                  <span className="text-xs bg-muted px-2 py-1 rounded-md">Coming Soon</span>
-                </label>
               </div>
             </div>
 
-            {/* Summary List */}
-            <div className="space-y-3">
-              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Order Summary</h4>
-               {cartItems.map(item => (
-                 <div key={item.id} className="flex justify-between items-center text-sm">
-                   <span className="font-medium">{item.quantity}x {item.name}</span>
-                   <span className="font-semibold text-muted-foreground">₹{item.price * item.quantity}</span>
-                 </div>
-               ))}
-               <div className="border-t border-border pt-3 mt-3 flex justify-between items-center font-bold text-lg">
-                 <span>Grand Total</span>
-                 <span className="text-primary">₹{total.toFixed(2)}</span>
-               </div>
+            <div className="border-t border-border pt-3 mt-3 flex justify-between items-center font-bold text-2xl">
+              <span>Total Payable</span>
+              <span className="text-primary">₹{total.toFixed(2)}</span>
             </div>
-
           </div>
 
           <div className="p-6 bg-background border-t border-border">
             <Button 
-              className="w-full h-14 rounded-2xl font-bold text-base shadow-lg shadow-primary/25"
+              className="w-full h-14 rounded-2xl font-bold text-lg shadow-lg shadow-primary/25"
               onClick={placeOrder}
               disabled={loading}
             >
-              {loading ? "Placing Order..." : `Place Order (₹${total.toFixed(2)})`}
+              {loading ? "Placing Order..." : `Confirm Order (₹${total.toFixed(2)})`}
             </Button>
           </div>
         </SheetContent>

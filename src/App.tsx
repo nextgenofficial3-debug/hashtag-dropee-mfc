@@ -24,6 +24,7 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminReservations from "./pages/admin/AdminReservations";
 import AdminMenu from "./pages/admin/AdminMenu";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminWhitelist from "./pages/admin/AdminWhitelist";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,18 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin w-8 h-8 rounded-full border-4 border-primary border-t-transparent" /></div>;
   if (!user || !isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function OnboardingGuard({ children }: { children: React.ReactNode }) {
+  const { user, isOnboarded, loading } = useAuth();
+  
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin w-8 h-8 rounded-full border-4 border-primary border-t-transparent" /></div>;
+  
+  if (!user) return <Navigate to="/auth/login" replace />;
+  
+  if (!isOnboarded) return <Navigate to="/auth/onboarding" replace />;
+  
   return <>{children}</>;
 }
 
@@ -55,11 +68,11 @@ const App = () => (
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/onboarding" element={<Onboarding />} />
             
-            {/* Customer Routes */}
-            <Route path="/" element={<MainLayout><Index /></MainLayout>} />
-            <Route path="/shop" element={<MainLayout><Shop /></MainLayout>} />
-            <Route path="/cart" element={<MainLayout><Cart /></MainLayout>} />
-            <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
+            {/* Customer Routes protected by OnboardingGuard */}
+            <Route path="/" element={<OnboardingGuard><MainLayout><Index /></MainLayout></OnboardingGuard>} />
+            <Route path="/shop" element={<OnboardingGuard><MainLayout><Shop /></MainLayout></OnboardingGuard>} />
+            <Route path="/cart" element={<OnboardingGuard><MainLayout><Cart /></MainLayout></OnboardingGuard>} />
+            <Route path="/profile" element={<OnboardingGuard><MainLayout><Profile /></MainLayout></OnboardingGuard>} />
             
             {/* Admin Routes */}
             <Route 
@@ -72,6 +85,7 @@ const App = () => (
                       <Route path="/orders" element={<AdminOrders />} />
                       <Route path="/reservations" element={<AdminReservations />} />
                       <Route path="/menu" element={<AdminMenu />} />
+                      <Route path="/whitelist" element={<AdminWhitelist />} />
                       <Route path="/settings" element={<AdminSettings />} />
                     </Routes>
                   </AdminLayout>

@@ -14,18 +14,17 @@ export default function AdminDashboard() {
        const today = new Date();
        today.setHours(0,0,0,0);
        
-       // Note: Normally we'd use SQL aggregation but doing it simply here to mock the UI
        const { data: orders } = await supabase
-         .from("orders")
-         .select("total_amount")
+         .from("mfc_orders")
+         .select("total")
          .gte("created_at", today.toISOString());
          
        const { count: resCount } = await supabase
-         .from("food_reservations")
+         .from("mfc_reservations")
          .select("*", { count: 'exact', head: true })
-         .eq("reservation_status", "pending");
+         .eq("status", "pending");
 
-       const revenue = orders?.reduce((acc, curr) => acc + (curr.total_amount || 0), 0) || 0;
+       const revenue = orders?.reduce((acc, curr) => acc + (curr.total || 0), 0) || 0;
        
        setMetrics({
          todayOrders: orders?.length || 0,
