@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MFC – Offline</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #ede8e0; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 2rem; }
+    .container { max-width: 400px; }
+    h1 { font-size: 2.5rem; color: #D4A853; margin-bottom: 1rem; }
+    p { font-size: 1.1rem; line-height: 1.6; opacity: 0.8; margin-bottom: 1.5rem; }
+    button { background: #8B1A1A; color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.75rem; font-size: 1rem; cursor: pointer; }
+    button:hover { background: #a52020; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MFC</h1>
+    <p>You're currently offline. Please check your internet connection and try again.</p>
+    <button onclick="window.location.reload()">Retry</button>
+  </div>
+</body>
+</html>

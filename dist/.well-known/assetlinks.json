@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "site.discoverukhrul.mfc.twa",
+        "sha256_cert_fingerprints": ["6C:8F:2C:49:5D:E7:A6:AE:22:86:1D:32:39:6C:B0:AB:EB:F2:93:38:E9:31:0E:EA:2E:83:C7:64:6D:D9:A1:C5"]
+      }
+    }]

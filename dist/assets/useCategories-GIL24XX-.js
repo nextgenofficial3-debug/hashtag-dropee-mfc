@@ -1,0 +1,1 @@
+import{b as s}from"./vendor-data-CgaAv_qU.js";import{s as a}from"./index-DHPnKu7q.js";const u=()=>s({queryKey:["categories"],queryFn:async()=>{const{data:e,error:r}=await a.from("mfc_categories").select("*").order("display_order",{ascending:!0});if(r)throw r;return e}});export{u};
