@@ -36,17 +36,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Initial fetch
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user ?? null;
-      setSession(session);
-      setUser(currentUser);
-      if (currentUser) {
-        checkAdminStatus(currentUser.email);
-      } else {
-        setRole(null);
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        const currentUser = session?.user ?? null;
+        setSession(session);
+        setUser(currentUser);
+        if (currentUser) {
+          checkAdminStatus(currentUser.email);
+        } else {
+          setRole(null);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error("Session fetch failed", err);
         setLoading(false);
-      }
-    });
+      });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
