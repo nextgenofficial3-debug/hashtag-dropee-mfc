@@ -1,81 +1,86 @@
-import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { CartProvider } from "@/contexts/CartContext";
-import { AdminProvider } from "@/contexts/AdminContext";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
-// Lazy-loaded pages — each becomes its own chunk
-const Index = lazy(() => import("./pages/Index"));
-const Shop = lazy(() => import("./pages/Shop"));
-const Checkout = lazy(() => import("./pages/Checkout"));
-const About = lazy(() => import("./pages/About"));
-const Contact = lazy(() => import("./pages/Contact"));
-const Install = lazy(() => import("./pages/Install"));
-const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation"));
-const TrackOrder = lazy(() => import("./pages/TrackOrder"));
-const Notifications = lazy(() => import("./pages/Notifications"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+// Pages
+import Index from "./pages/Index";
+import Login from "./pages/auth/Login";
+import Onboarding from "./pages/auth/Onboarding";
+import Shop from "./pages/Shop";
+import Cart from "./pages/Cart";
+import Profile from "./pages/Profile";
 
-// Admin pages — rarely visited by customers, split separately
-const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
-const AdminPromotions = lazy(() => import("./pages/admin/AdminPromotions"));
-const AdminCoupons = lazy(() => import("./pages/admin/AdminCoupons"));
-const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
-const AdminContent = lazy(() => import("./pages/admin/AdminContent"));
-const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
-const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
-const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
-const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
+// Layouts
+import TopBar from "./components/layout/TopBar";
+import BottomNavigation from "./components/layout/BottomNavigation";
+import AdminLayout from "./components/admin/AdminLayout";
+
+// Admin
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminReservations from "./pages/admin/AdminReservations";
+import AdminMenu from "./pages/admin/AdminMenu";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
+
+function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, isAdmin, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin w-8 h-8 rounded-full border-4 border-primary border-t-transparent" /></div>;
+  if (!user || !isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function MainLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col min-h-screen bg-background">
+      <TopBar />
+      <main className="flex-1 pb-20">{children}</main>
+      <BottomNavigation />
+    </div>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AdminProvider>
-        <CartProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
-              <Routes>
-                {/* Customer Routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/install" element={<Install />} />
-                <Route path="/order-confirmation" element={<OrderConfirmation />} />
-                <Route path="/track-order" element={<TrackOrder />} />
-                <Route path="/notifications" element={<Notifications />} />
-
-                {/* Admin Routes */}
-                <Route path="/admin" element={<AdminLogin />} />
-                <Route element={<AdminLayout />}>
-                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  <Route path="/admin/products" element={<AdminProducts />} />
-                  <Route path="/admin/promotions" element={<AdminPromotions />} />
-                  <Route path="/admin/coupons" element={<AdminCoupons />} />
-                  <Route path="/admin/orders" element={<AdminOrders />} />
-                  <Route path="/admin/notifications" element={<AdminNotifications />} />
-                  <Route path="/admin/reviews" element={<AdminReviews />} />
-                  <Route path="/admin/content" element={<AdminContent />} />
-                  <Route path="/admin/settings" element={<AdminSettings />} />
-                </Route>
-
-                {/* Catch-all */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </CartProvider>
-      </AdminProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/onboarding" element={<Onboarding />} />
+            
+            {/* Customer Routes */}
+            <Route path="/" element={<MainLayout><Index /></MainLayout>} />
+            <Route path="/shop" element={<MainLayout><Shop /></MainLayout>} />
+            <Route path="/cart" element={<MainLayout><Cart /></MainLayout>} />
+            <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
+            
+            {/* Admin Routes */}
+            <Route 
+              path="/admin/*" 
+              element={
+                <ProtectedAdminRoute>
+                  <AdminLayout>
+                    <Routes>
+                      <Route path="/" element={<AdminDashboard />} />
+                      <Route path="/orders" element={<AdminOrders />} />
+                      <Route path="/reservations" element={<AdminReservations />} />
+                      <Route path="/menu" element={<AdminMenu />} />
+                      <Route path="/settings" element={<AdminSettings />} />
+                    </Routes>
+                  </AdminLayout>
+                </ProtectedAdminRoute>
+              } 
+            />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
