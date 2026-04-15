@@ -36,14 +36,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const handleAuthChange = async (session: Session | null) => {
-      setSession(session);
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
+      try {
+        console.log("Auth state change detected:", !!session);
+        setSession(session);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
 
-      if (currentUser) {
-        await checkAdminStatus(currentUser.email);
-      } else {
-        setRole(null);
+        if (currentUser) {
+          console.log("Checking admin status for:", currentUser.email);
+          await checkAdminStatus(currentUser.email);
+        } else {
+          setRole(null);
+        }
+      } catch (error) {
+        console.error("Error in handleAuthChange:", error);
+      } finally {
         setLoading(false);
       }
     };
