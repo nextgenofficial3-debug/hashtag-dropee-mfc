@@ -40,14 +40,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
     let authTimeout: NodeJS.Timeout;
+    const initialized = { current: false };
 
-    const handleAuthChange = async (currentSession: Session | null) => {
+    const handleAuthChange = async (currentSession: Session | null, source: string) => {
+      // Prevent multiple parallel initializations on first load
+      if (source === "INITIAL" && initialized.current) return;
+      if (source === "INITIAL") initialized.current = true;
+
       try {
-        console.log("Auth state change detected in MFC:", !!currentSession);
+        console.group(`🔐 MFC Auth Sync [${source}]`);
+        console.log("Session exists:", !!currentSession);
+        console.log("User:", currentSession?.user?.email || "none");
         
-        // Clear any existing timeout since we got a response
         if (authTimeout) clearTimeout(authTimeout);
-
         if (!isMounted) return;
 
         setSession(currentSession);
@@ -55,26 +60,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(currentUser);
 
         if (currentUser) {
-          console.log("Checking admin status for:", currentUser.email);
           await checkAdminStatus(currentUser.email);
         } else {
           setRole(null);
           setLoading(false);
         }
       } catch (error) {
-        console.error("Error in handleAuthChange MFC:", error);
+        console.error("Auth sync failed:", error);
         if (isMounted) {
-          setAuthError("Failed to initialize authentication. Please try again.");
+          setAuthError("Failed to initialize authentication.");
           setLoading(false);
         }
+      } finally {
+        console.groupEnd();
       }
     };
 
-    // Set a safety timeout - if auth hasn't resolved in 8 seconds, force stop loading
+    // Safety timeout - if auth hasn't resolved in 8 seconds, force stop loading
     authTimeout = setTimeout(() => {
       if (isMounted && loading) {
-        console.error("Auth initialization timeout in MFC");
-        setAuthError("Authentication is taking longer than expected. Please check your connection.");
+        console.warn("⚠️ Auth initialization timeout reached");
+        setAuthError("Authentication is taking longer than expected.");
         setLoading(false);
       }
     }, 8000);
@@ -82,20 +88,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Initial fetch
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
-        if (isMounted) handleAuthChange(session);
+        if (isMounted) handleAuthChange(session, "SESSION_GET");
       })
       .catch((err) => {
-        console.error("Session fetch failed MFC", err);
-        if (isMounted) {
-          setAuthError("Failed to connect to authentication service.");
-          setLoading(false);
-        }
+        console.error("Initial session fetch failed", err);
+        if (isMounted) setLoading(false);
       });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (isMounted) await handleAuthChange(session);
+      async (event, session) => {
+        if (isMounted) {
+          console.log(`📡 Supabase Auth Event: ${event}`);
+          await handleAuthChange(session, event);
+        }
       }
     );
 
