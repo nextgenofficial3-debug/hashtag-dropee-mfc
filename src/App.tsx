@@ -30,16 +30,92 @@ import AdminWhitelist from "./pages/admin/AdminWhitelist";
 const queryClient = new QueryClient();
 
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin w-8 h-8 rounded-full border-4 border-primary border-t-transparent" /></div>;
+  const { user, isAdmin, loading, authError, signOut } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <div className="animate-spin w-8 h-8 rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-muted-foreground text-sm animate-pulse">Initializing secure session...</p>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full glass rounded-3xl p-8 border border-destructive/20 text-center space-y-6">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+            <span className="text-2xl text-destructive">⚠️</span>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">Authentication Issue</h2>
+            <p className="text-muted-foreground text-sm">{authError}</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full h-12 bg-primary text-white rounded-xl font-semibold hover:opacity-90 transition-opacity"
+            >
+              Retry Connection
+            </button>
+            <button 
+              onClick={signOut}
+              className="w-full h-12 bg-secondary text-foreground rounded-xl font-semibold hover:opacity-90 transition-opacity"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!user || !isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
-  const { user, isOnboarded, loading } = useAuth();
+  const { user, isOnboarded, loading, authError, signOut } = useAuth();
   
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin w-8 h-8 rounded-full border-4 border-primary border-t-transparent" /></div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <div className="animate-spin w-8 h-8 rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-muted-foreground text-sm animate-pulse">Loading your account...</p>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full glass rounded-3xl p-8 border border-destructive/20 text-center space-y-6">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+            <span className="text-2xl text-destructive">⚠️</span>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">Wait a moment</h2>
+            <p className="text-muted-foreground text-sm">{authError}</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full h-12 bg-primary text-white rounded-xl font-semibold hover:opacity-90 transition-opacity"
+            >
+              Refresh App
+            </button>
+            <button 
+              onClick={signOut}
+              className="w-full h-12 bg-secondary text-foreground rounded-xl font-semibold hover:opacity-90 transition-opacity"
+            >
+              Back to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   if (!user) return <Navigate to="/auth/login" replace />;
   
