@@ -109,12 +109,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (currentUser && mounted) {
             await checkAdminStatus(currentUser.email);
           }
+          if (mounted) setLoading(false);
+          if ("caches" in window) {
+            caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
+          }
 
         } else if (event === "SIGNED_OUT") {
           if (mounted) {
             setSession(null);
             setUser(null);
             setRole(null);
+            setLoading(false);
           }
 
         } else if (event === "TOKEN_REFRESHED") {

@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/auth/Login";
 import Onboarding from "./pages/auth/Onboarding";
+import AuthCallbackHandler from "./pages/auth/AuthCallbackHandler";
 import Shop from "./pages/Shop";
 import Cart from "./pages/Cart";
 import Profile from "./pages/Profile";
@@ -150,6 +151,7 @@ const App = () => (
           <Routes>
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/onboarding" element={<Onboarding />} />
+            <Route path="/auth/callback" element={<AuthCallbackHandler />} />
             
             {/* Customer Routes protected by OnboardingGuard */}
             <Route path="/" element={<OnboardingGuard><MainLayout><Index /></MainLayout></OnboardingGuard>} />
