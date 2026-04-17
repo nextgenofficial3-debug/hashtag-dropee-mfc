@@ -12,6 +12,12 @@ import Onboarding from "./pages/auth/Onboarding";
 import Shop from "./pages/Shop";
 import Cart from "./pages/Cart";
 import Profile from "./pages/Profile";
+import Discover from "./pages/Discover";
+import Checkout from "./pages/Checkout";
+import PickAndDrop from "./pages/PickAndDrop";
+import Bookings from "./pages/Bookings";
+import Orders from "./pages/Orders";
+import OrderTracking from "./pages/OrderTracking";
 
 // Layouts
 import TopBar from "./components/layout/TopBar";
@@ -150,6 +156,12 @@ const App = () => (
             <Route path="/shop" element={<OnboardingGuard><MainLayout><Shop /></MainLayout></OnboardingGuard>} />
             <Route path="/cart" element={<OnboardingGuard><MainLayout><Cart /></MainLayout></OnboardingGuard>} />
             <Route path="/profile" element={<OnboardingGuard><MainLayout><Profile /></MainLayout></OnboardingGuard>} />
+            <Route path="/discover" element={<OnboardingGuard><MainLayout><Discover /></MainLayout></OnboardingGuard>} />
+            <Route path="/checkout" element={<OnboardingGuard><Checkout /></OnboardingGuard>} />
+            <Route path="/pick-and-drop" element={<OnboardingGuard><PickAndDrop /></OnboardingGuard>} />
+            <Route path="/bookings" element={<OnboardingGuard><MainLayout><Bookings /></MainLayout></OnboardingGuard>} />
+            <Route path="/orders" element={<OnboardingGuard><MainLayout><Orders /></MainLayout></OnboardingGuard>} />
+            <Route path="/orders/:orderId" element={<OnboardingGuard><OrderTracking /></OnboardingGuard>} />
             
             {/* Admin Routes */}
             <Route 

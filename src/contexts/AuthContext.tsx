@@ -37,81 +37,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    let authTimeout: NodeJS.Timeout;
-    const initialized = { current: false };
-
-    const handleAuthChange = async (currentSession: Session | null, source: string) => {
-      // Prevent multiple parallel initializations on first load
-      if (source === "INITIAL" && initialized.current) return;
-      if (source === "INITIAL") initialized.current = true;
-
-      try {
-        console.group(`🔐 MFC Auth Sync [${source}]`);
-        console.log("Session exists:", !!currentSession);
-        console.log("User:", currentSession?.user?.email || "none");
-        
-        if (authTimeout) clearTimeout(authTimeout);
-        if (!isMounted) return;
-
-        setSession(currentSession);
-        const currentUser = currentSession?.user ?? null;
-        setUser(currentUser);
-
-        if (currentUser) {
-          await checkAdminStatus(currentUser.email);
-        } else {
-          setRole(null);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Auth sync failed:", error);
-        if (isMounted) {
-          setAuthError("Failed to initialize authentication.");
-          setLoading(false);
-        }
-      } finally {
-        console.groupEnd();
-      }
-    };
-
-    // Safety timeout - if auth hasn't resolved in 8 seconds, force stop loading
-    authTimeout = setTimeout(() => {
-      if (isMounted && loading) {
-        console.warn("⚠️ Auth initialization timeout reached");
-        setAuthError("Authentication is taking longer than expected.");
-        setLoading(false);
-      }
-    }, 8000);
-
-    // Initial fetch
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (isMounted) handleAuthChange(session, "SESSION_GET");
-      })
-      .catch((err) => {
-        console.error("Initial session fetch failed", err);
-        if (isMounted) setLoading(false);
-      });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (isMounted) {
-          console.log(`📡 Supabase Auth Event: ${event}`);
-          await handleAuthChange(session, event);
-        }
-      }
-    );
-
-    return () => {
-      isMounted = false;
-      if (authTimeout) clearTimeout(authTimeout);
-      subscription.unsubscribe();
-    };
-  }, []);
-
   const checkAdminStatus = async (email: string | undefined) => {
     if (email === "hashtagdropee@gmail.com") {
       setRole("super_admin");
@@ -131,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select("role")
         .eq("email", email)
         .single();
-      
+
       if (data && !error) {
         setRole(data.role as UserRole);
       } else {
@@ -139,16 +64,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error("Failed to fetch admin status MFC", err);
-      // Don't set hard authError here, just log and treat as non-admin
       setRole(null);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    let isMounted = true;
+
+    // Safety timeout — 6 s max
+    const authTimeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.warn("⚠️ Auth initialization timeout in MFC");
+        setAuthError("Authentication is taking longer than expected.");
+        setLoading(false);
+      }
+    }, 6000);
+
+    // ─── SINGLE SOURCE OF TRUTH ──────────────────────────────────────────────
+    // onAuthStateChange fires INITIAL_SESSION on page load — this fully
+    // replaces the old getSession() + onAuthStateChange dual-trigger pattern
+    // that caused race conditions and infinite loading states.
+    // ─────────────────────────────────────────────────────────────────────────
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        if (!isMounted) return;
+
+        console.log(`🔐 MFC Auth Event [${event}]`);
+        clearTimeout(authTimeout);
+
+        setSession(currentSession);
+        const currentUser = currentSession?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          await checkAdminStatus(currentUser.email);
+        } else {
+          setRole(null);
+          if (isMounted) setLoading(false);
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      clearTimeout(authTimeout);
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const signInWithGoogle = async () => {
     try {
-      setLoading(true);
       setAuthError(null);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -160,7 +127,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error("Google sign-in error MFC:", err);
       setAuthError(err.message || "Failed to start Google sign-in");
-      setLoading(false);
     }
   };
 
