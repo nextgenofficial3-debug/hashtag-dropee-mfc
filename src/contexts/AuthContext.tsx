@@ -40,13 +40,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkAdminStatus = async (email: string | undefined) => {
     if (email === "hashtagdropee@gmail.com") {
       setRole("super_admin");
-      setLoading(false);
       return;
     }
 
     if (!email) {
       setRole(null);
-      setLoading(false);
       return;
     }
 
@@ -65,51 +63,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error("Failed to fetch admin status MFC", err);
       setRole(null);
-    } finally {
-      setLoading(false);
     }
+    // Note: NO setLoading(false) here — loading is only cleared in INITIAL_SESSION handler
   };
 
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
 
-    // Safety timeout — 6 s max
-    const authTimeout = setTimeout(() => {
-      if (isMounted && loading) {
-        console.warn("⚠️ Auth initialization timeout in MFC");
+    // Safety timeout — forces setLoading(false) after 5 s if INITIAL_SESSION never fires
+    const safetyTimer = setTimeout(() => {
+      if (mounted) {
+        console.warn("MFC: INITIAL_SESSION never fired — forcing loading=false");
         setAuthError("Authentication is taking longer than expected.");
         setLoading(false);
       }
-    }, 6000);
+    }, 5000);
 
-    // ─── SINGLE SOURCE OF TRUTH ──────────────────────────────────────────────
-    // onAuthStateChange fires INITIAL_SESSION on page load — this fully
-    // replaces the old getSession() + onAuthStateChange dual-trigger pattern
-    // that caused race conditions and infinite loading states.
-    // ─────────────────────────────────────────────────────────────────────────
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        if (!isMounted) return;
+        if (!mounted) return;
 
         console.log(`🔐 MFC Auth Event [${event}]`);
-        clearTimeout(authTimeout);
 
-        setSession(currentSession);
-        const currentUser = currentSession?.user ?? null;
-        setUser(currentUser);
+        if (event === "INITIAL_SESSION") {
+          // Clear the safety timer — we got a real response
+          clearTimeout(safetyTimer);
 
-        if (currentUser) {
-          await checkAdminStatus(currentUser.email);
-        } else {
-          setRole(null);
-          if (isMounted) setLoading(false);
+          setSession(currentSession);
+          const currentUser = currentSession?.user ?? null;
+          setUser(currentUser);
+
+          if (currentUser) {
+            await checkAdminStatus(currentUser.email);
+          } else {
+            setRole(null);
+          }
+
+          // setLoading(false) ONLY here — on INITIAL_SESSION
+          if (mounted) setLoading(false);
+
+        } else if (event === "SIGNED_IN") {
+          setSession(currentSession);
+          const currentUser = currentSession?.user ?? null;
+          setUser(currentUser);
+          if (currentUser && mounted) {
+            await checkAdminStatus(currentUser.email);
+          }
+
+        } else if (event === "SIGNED_OUT") {
+          if (mounted) {
+            setSession(null);
+            setUser(null);
+            setRole(null);
+          }
+
+        } else if (event === "TOKEN_REFRESHED") {
+          if (mounted) setSession(currentSession);
         }
       }
     );
 
     return () => {
-      isMounted = false;
-      clearTimeout(authTimeout);
+      mounted = false;
+      clearTimeout(safetyTimer);
       subscription.unsubscribe();
     };
   }, []);
