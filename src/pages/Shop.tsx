@@ -25,12 +25,12 @@ export default function Shop() {
     async function fetchData() {
       try {
         const [itemsRes, catsRes] = await Promise.all([
-          supabase.from("mfc_menu_items").select("*").eq("is_available", true),
-          supabase.from("mfc_categories").select("*").order("sort_order", { ascending: true })
+          supabase.from("mfc_menu_items" as any).select("*").eq("is_available", true),
+          supabase.from("mfc_categories" as any).select("*").order("sort_order", { ascending: true })
         ]);
 
-        if (itemsRes.data) setItems(itemsRes.data);
-        if (catsRes.data) setCategories(catsRes.data);
+        if (itemsRes.data) setItems(itemsRes.data as any);
+        if (catsRes.data) setCategories(catsRes.data as any);
       } catch (err) {
         console.error("Shop error:", err);
       } finally {

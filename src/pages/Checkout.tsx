@@ -59,16 +59,16 @@ export default function Checkout() {
         .from("orders")
         .insert({
           user_id: user?.id,
-          customer_email: user?.email,
-          delivery_address: address,
-          phone,
+          customer_name: user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Guest",
+          customer_phone: phone,
+          customer_address: address,
           notes,
           payment_method: paymentMethod,
           subtotal,
           delivery_fee: deliveryFee,
           total_amount: total,
           status: "pending",
-          items: cart,
+          items: cart as any,
         })
         .select()
         .single();

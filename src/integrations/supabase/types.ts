@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -373,19 +373,19 @@ export type Database = {
       mfc_categories: {
         Row: {
           created_at: string
-          display_order: number | null
+          sort_order: number | null
           id: string
           name: string
         }
         Insert: {
           created_at?: string
-          display_order?: number | null
+          sort_order?: number | null
           id?: string
           name: string
         }
         Update: {
           created_at?: string
-          display_order?: number | null
+          sort_order?: number | null
           id?: string
           name?: string
         }
@@ -453,6 +453,50 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      mfc_menu_items: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean | null
+          name: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          name: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mfc_menu_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "mfc_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mfc_orders: {
         Row: {
@@ -618,6 +662,39 @@ export type Database = {
           id?: string
           p256dh?: string
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      mfc_user_addresses: {
+        Row: {
+          address_type: string
+          created_at: string
+          full_address: string
+          id: string
+          is_default: boolean
+          lat: number | null
+          lng: number | null
+          user_id: string
+        }
+        Insert: {
+          address_type?: string
+          created_at?: string
+          full_address: string
+          id?: string
+          is_default?: boolean
+          lat?: number | null
+          lng?: number | null
+          user_id: string
+        }
+        Update: {
+          address_type?: string
+          created_at?: string
+          full_address?: string
+          id?: string
+          is_default?: boolean
+          lat?: number | null
+          lng?: number | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -875,6 +952,7 @@ export type Database = {
           customer_address: string
           customer_name: string
           customer_phone: string
+          customer_email?: string | null
           discount?: number
           fee?: number | null
           hub_order_id?: string | null
@@ -888,6 +966,7 @@ export type Database = {
           status?: string
           subtotal?: number
           total?: number
+          total_amount?: number
           updated_at?: string | null
         }
         Update: {
