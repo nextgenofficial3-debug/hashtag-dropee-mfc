@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, Store, Utensils, ShoppingBag, FlaskConical, Star } from "lucide-react";
+import { useShops } from "@/hooks/useShops";
 
 const CATEGORIES = [
   { id: "food", label: "Food", icon: Utensils, color: "text-orange-400", bg: "bg-orange-400/10" },
@@ -22,23 +23,9 @@ interface Shop {
 }
 
 export default function Discover() {
-  const [shops, setShops] = useState<Shop[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchShops = async () => {
-      setLoading(true);
-      let query = supabase.from("shops").select("*").order("name");
-      if (category) query = query.eq("category", category);
-
-      const { data, error } = await query;
-      if (!error) setShops(data || []);
-      setLoading(false);
-    };
-    fetchShops();
-  }, [category]);
+  const { shops, loading } = useShops(category || undefined);
 
   const filtered = shops.filter((s) =>
     !search || s.name.toLowerCase().includes(search.toLowerCase()) ||

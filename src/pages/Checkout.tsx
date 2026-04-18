@@ -39,9 +39,61 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [placing, setPlacing] = useState(false);
 
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState(0);
+
   const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
   const deliveryFee = subtotal > 0 ? 30 : 0;
-  const total = subtotal + deliveryFee;
+  const total = Math.max(0, subtotal + deliveryFee - discountAmount);
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setValidatingCoupon(true);
+    try {
+      const { data, error } = await supabase
+        .from("coupons")
+        .select("*")
+        .eq("code", couponCode.trim().toUpperCase())
+        .eq("is_active", true)
+        .single();
+        
+      if (error || !data) throw new Error("Invalid or expired coupon");
+      
+      const now = new Date();
+      if (data.valid_from && new Date(data.valid_from) > now) throw new Error("Coupon is not active yet");
+      if (data.valid_until && new Date(data.valid_until) < now) throw new Error("Coupon has expired");
+      if (data.max_uses && data.current_uses >= data.max_uses) throw new Error("Coupon usage limit reached");
+      if (data.min_order_amount && subtotal < data.min_order_amount) throw new Error(`Minimum order amount is ₹${data.min_order_amount}`);
+
+      let amount = 0;
+      if (data.discount_type === 'percentage') {
+        amount = subtotal * (data.discount_value / 100);
+        if (data.max_discount_amount && amount > data.max_discount_amount) {
+          amount = data.max_discount_amount;
+        }
+      } else {
+        amount = data.discount_value;
+      }
+      
+      setAppliedCoupon(data);
+      setDiscountAmount(amount);
+      toast({ title: `Coupon applied: ₹${amount.toFixed(2)} off` });
+    } catch (err: any) {
+      toast({ title: err.message, variant: "destructive" });
+      setAppliedCoupon(null);
+      setDiscountAmount(0);
+    }
+    setValidatingCoupon(false);
+  };
+  
+  const removeCoupon = () => {
+    setCouponCode("");
+    setAppliedCoupon(null);
+    setDiscountAmount(0);
+  };
 
   const placeOrder = async () => {
     if (!address.trim()) {
@@ -66,6 +118,8 @@ export default function Checkout() {
           payment_method: paymentMethod,
           subtotal,
           delivery_fee: deliveryFee,
+          discount: discountAmount,
+          applied_coupon_id: appliedCoupon?.id || null,
           total_amount: total,
           status: "pending",
           items: cart as any,
@@ -185,21 +239,61 @@ export default function Checkout() {
           </div>
         </div>
 
+        {/* Coupon */}
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">Have a coupon?</span>
+          </div>
+          {appliedCoupon ? (
+            <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl p-3">
+              <div>
+                <p className="text-sm font-bold text-primary">{appliedCoupon.code}</p>
+                <p className="text-xs text-primary/80">₹{discountAmount.toFixed(2)} saved!</p>
+              </div>
+              <button onClick={removeCoupon} className="p-2 text-destructive hover:bg-destructive/10 rounded-xl">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                placeholder="Enter code"
+                className="flex-1 px-4 py-3 rounded-xl bg-secondary border border-border text-sm text-foreground uppercase placeholder:normal-case placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <button
+                onClick={applyCoupon}
+                disabled={validatingCoupon || !couponCode.trim()}
+                className="px-5 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 disabled:opacity-60 transition-all font-semibold whitespace-nowrap"
+              >
+                {validatingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Order Summary */}
         <div className="bg-card rounded-2xl border border-border p-4 space-y-2">
           <p className="text-sm font-semibold text-foreground mb-3">Order Summary</p>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
-            <span className="text-foreground">₹{subtotal}</span>
+            <span className="text-foreground">₹{subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Delivery Fee</span>
-            <span className="text-foreground">₹{deliveryFee}</span>
+            <span className="text-foreground">₹{deliveryFee.toFixed(2)}</span>
           </div>
+          {discountAmount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-primary font-medium">Discount</span>
+              <span className="text-primary font-medium">-₹{discountAmount.toFixed(2)}</span>
+            </div>
+          )}
           <div className="h-px bg-border my-1" />
           <div className="flex justify-between text-base font-bold">
             <span className="text-foreground">Total</span>
-            <span className="text-primary">₹{total}</span>
+            <span className="text-primary">₹{total.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -214,7 +308,7 @@ export default function Checkout() {
           {placing ? (
             <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
-            `Place Order • ₹${total}`
+            `Place Order • ₹${total.toFixed(2)}`
           )}
         </button>
       </div>

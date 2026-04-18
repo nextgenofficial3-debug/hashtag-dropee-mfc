@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Package, ChevronRight, Clock, CheckCircle2, Truck, XCircle } from "lucide-react";
+import { useCustomerOrders } from "@/hooks/useCustomerOrders";
 
 interface Order {
   id: string;
@@ -24,25 +25,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
 
 export default function Orders() {
   const { user } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user) { setLoading(false); return; }
-
-    const fetchOrders = async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (!error) setOrders(data || []);
-      setLoading(false);
-    };
-
-    fetchOrders();
-  }, [user]);
+  const { orders, loading } = useCustomerOrders(user?.id);
 
   if (!user) {
     return (

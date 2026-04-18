@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useProducts } from "@/hooks/useProducts";
 
 export default function Shop() {
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<any[]>([]);
+  const { products: items, loading: itemsLoading } = useProducts();
   const [categories, setCategories] = useState<any[]>([]);
+  const [catsLoading, setCatsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -22,23 +23,20 @@ export default function Shop() {
   const { user } = useAuth();
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchCats() {
       try {
-        const [itemsRes, catsRes] = await Promise.all([
-          supabase.from("mfc_menu_items" as any).select("*").eq("is_available", true),
-          supabase.from("mfc_categories" as any).select("*").order("sort_order", { ascending: true })
-        ]);
-
-        if (itemsRes.data) setItems(itemsRes.data as any);
+        const catsRes = await supabase.from("mfc_categories" as any).select("*").order("sort_order", { ascending: true });
         if (catsRes.data) setCategories(catsRes.data as any);
       } catch (err) {
         console.error("Shop error:", err);
       } finally {
-        setLoading(false);
+        setCatsLoading(false);
       }
     }
-    fetchData();
+    fetchCats();
   }, []);
+
+  const loading = itemsLoading || catsLoading;
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());

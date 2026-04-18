@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { ImageUpload } from "@/components/ImageUpload";
 
 export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
@@ -138,11 +139,9 @@ export default function AdminSettings() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="logoUrl" className="text-zinc-400">Logo Image URL</Label>
-              <Input 
-                id="logoUrl"
-                value={settings.brand_logo_url || ''} 
-                onChange={(e) => setSettings({...settings, brand_logo_url: e.target.value})} 
-                className="bg-zinc-950 border-zinc-800"
+              <ImageUpload
+                value={settings.brand_logo_url || ''}
+                onChange={(url) => setSettings({...settings, brand_logo_url: url})}
               />
             </div>
           </div>

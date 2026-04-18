@@ -4,30 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, ArrowRight, Utensils, Star, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ReservationFlow } from "@/components/reservation/ReservationFlow";
+import { useProducts } from "@/hooks/useProducts";
 
 export default function Index() {
-  const [loading, setLoading] = useState(true);
-  const [trendingItems, setTrendingItems] = useState<any[]>([]);
+  const { products, loading } = useProducts();
+  const trendingItems = products.slice(0, 5); // Limit to 5 for UI
   const [isReservationOpen, setIsReservationOpen] = useState(false);
-
-  useEffect(() => {
-    async function fetchHomeData() {
-      try {
-        const { data, error } = await supabase
-          .from("mfc_menu_items")
-          .select("*")
-          .eq("is_available", true)
-          .limit(5);
-
-        if (data) setTrendingItems(data);
-      } catch (err) {
-        console.error("Home error:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchHomeData();
-  }, []);
 
   return (
     <div className="min-h-screen bg-background pb-20">
