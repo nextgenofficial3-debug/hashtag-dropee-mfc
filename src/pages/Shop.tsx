@@ -46,13 +46,42 @@ export default function Shop() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleAddToCart = async () => {
+  // Cart count badge
+  const [cartCount, setCartCount] = useState(() => {
+    try {
+      const cart = JSON.parse(localStorage.getItem("dropee_cart") || "[]");
+      return cart.reduce((sum: number, i: any) => sum + (i.quantity || 1), 0);
+    } catch { return 0; }
+  });
+
+  const handleAddToCart = () => {
     if (!user) {
       toast.error("Please login to add to cart");
       return;
     }
-    // Placeholder for actual cart Logic against Supabase OR local state
-    toast.success(`Added ${quantity}x ${selectedItem?.name} to cart`);
+    if (!selectedItem) return;
+
+    try {
+      const cart = JSON.parse(localStorage.getItem("dropee_cart") || "[]");
+      const existing = cart.find((i: any) => i.id === selectedItem.id);
+      if (existing) {
+        existing.quantity = (existing.quantity || 1) + quantity;
+        existing.special_instructions = specialInstructions || existing.special_instructions;
+      } else {
+        cart.push({
+          ...selectedItem,
+          quantity,
+          special_instructions: specialInstructions,
+        });
+      }
+      localStorage.setItem("dropee_cart", JSON.stringify(cart));
+      const newCount = cart.reduce((sum: number, i: any) => sum + (i.quantity || 1), 0);
+      setCartCount(newCount);
+      toast.success(`Added ${quantity}x ${selectedItem.name} to cart 🛒`);
+    } catch (err) {
+      toast.error("Failed to add to cart");
+    }
+
     setSelectedItem(null);
     setQuantity(1);
     setSpecialInstructions("");

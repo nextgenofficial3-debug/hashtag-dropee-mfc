@@ -16,9 +16,6 @@ interface CartItem {
   image_url?: string | null;
 }
 
-// Simplified cart (in production this would come from global state / Zustand)
-const MOCK_CART: CartItem[] = [];
-
 const PAYMENT_METHODS = [
   { id: "cod", label: "Cash on Delivery", icon: Banknote },
   { id: "upi", label: "UPI Payment", icon: Wallet2 },
@@ -30,7 +27,12 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [cart] = useState<CartItem[]>(MOCK_CART);
+  // Read cart from localStorage instead of static mock
+  const [cart] = useState<CartItem[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("dropee_cart") || "[]");
+    } catch { return []; }
+  });
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState(user?.user_metadata?.phone || "");
   const [notes, setNotes] = useState("");
@@ -72,6 +74,9 @@ export default function Checkout() {
         .single();
 
       if (error) throw error;
+
+      // Clear cart from localStorage after successful order
+      localStorage.removeItem("dropee_cart");
 
       toast({ title: "🎉 Order placed successfully!" });
       navigate(`/orders/${order.id}`, { replace: true });
