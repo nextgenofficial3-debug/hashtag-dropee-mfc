@@ -1,4 +1,4 @@
-const SW_VERSION = '2026-03-09-1';
+const SW_VERSION = '2026-04-24-1';
 const CACHE_NAME = `mfc-cache-${SW_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
