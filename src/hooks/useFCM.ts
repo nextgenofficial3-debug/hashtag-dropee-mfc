@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { app, getMessaging, getToken, onMessage, isSupported } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
+import { env, hasFirebaseMessagingEnv } from '@/lib/env';
 import { toast } from 'sonner';
 
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY as string;
 const APP_NAME = 'mfc';
 
 export function useFCM() {
@@ -33,6 +33,11 @@ export function useFCM() {
   }, []);
 
   const requestPermission = useCallback(async () => {
+    if (!hasFirebaseMessagingEnv() || !app || !env.firebase.vapidKey) {
+      toast.error('Firebase messaging is not configured for this deployment');
+      return null;
+    }
+
     const supported = await isSupported();
     if (!supported) return null;
 
@@ -41,10 +46,23 @@ export function useFCM() {
       setPermission(perm);
       if (perm !== 'granted') return null;
 
-      const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      const swParams = new URLSearchParams({
+        apiKey: env.firebase.apiKey!,
+        authDomain: env.firebase.authDomain!,
+        projectId: env.firebase.projectId!,
+        storageBucket: env.firebase.storageBucket!,
+        messagingSenderId: env.firebase.messagingSenderId!,
+        appId: env.firebase.appId!,
+      });
+
+      if (env.firebase.measurementId) {
+        swParams.set('measurementId', env.firebase.measurementId);
+      }
+
+      const swReg = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?${swParams.toString()}`);
       const messaging = getMessaging(app);
       const token = await getToken(messaging, {
-        vapidKey: VAPID_KEY,
+        vapidKey: env.firebase.vapidKey,
         serviceWorkerRegistration: swReg,
       });
 
@@ -84,7 +102,7 @@ export function useFCM() {
       requestPermission();
     }
     return () => { unsubscribeRef.current?.(); };
-  }, []);
+  }, [requestPermission]);
 
   return { fcmToken, permission, isReady, requestPermission, removeToken };
 }

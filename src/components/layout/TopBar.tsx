@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { StoreSettings } from "@/types/app";
 
 export default function TopBar() {
   const [brandName, setBrandName] = useState("MFC Food");
@@ -14,8 +15,9 @@ export default function TopBar() {
         .single();
       
       if (data && !error) {
-        if (data.brand_name) setBrandName(data.brand_name);
-        if (data.brand_logo_url) setLogoUrl(data.brand_logo_url);
+        const settings = data as Pick<StoreSettings, "brand_name" | "brand_logo_url">;
+        if (settings.brand_name) setBrandName(settings.brand_name);
+        if (settings.brand_logo_url) setLogoUrl(settings.brand_logo_url);
       }
     };
     fetchSettings();

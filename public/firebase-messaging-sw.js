@@ -1,37 +1,42 @@
-// Firebase Messaging Service Worker — MFC App
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
-firebase.initializeApp({
-  apiKey: "AIzaSyCExdszDcQzhJHoUvOqVlRwyfqfKkoA3kY",
-  authDomain: "webapp-af75d.firebaseapp.com",
-  projectId: "webapp-af75d",
-  storageBucket: "webapp-af75d.firebasestorage.app",
-  messagingSenderId: "52507263282",
-  appId: "1:52507263282:web:da4df9b6e02b2d23e8d72b",
-});
+const searchParams = new URL(self.location.href).searchParams;
+const firebaseConfig = {
+  apiKey: searchParams.get('apiKey'),
+  authDomain: searchParams.get('authDomain'),
+  projectId: searchParams.get('projectId'),
+  storageBucket: searchParams.get('storageBucket'),
+  messagingSenderId: searchParams.get('messagingSenderId'),
+  appId: searchParams.get('appId'),
+  measurementId: searchParams.get('measurementId'),
+};
 
-const messaging = firebase.messaging();
+if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.messagingSenderId && firebaseConfig.appId) {
+  firebase.initializeApp(firebaseConfig);
+}
 
-messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] MFC background message:', payload);
+const messaging = firebase.apps.length ? firebase.messaging() : null;
 
-  const { title, body, icon } = payload.notification || {};
-  const notificationTitle = title || '🍗 MFC Order Update';
-  const notificationOptions = {
-    body: body || 'Your order status has been updated!',
-    icon: icon || '/icon-512.png',
-    badge: '/icon-192.png',
-    vibrate: [200, 100, 200],
-    data: payload.data || {},
-    actions: [
-      { action: 'track', title: '📦 Track Order' },
-      { action: 'dismiss', title: 'Dismiss' },
-    ],
-  };
+if (messaging) {
+  messaging.onBackgroundMessage((payload) => {
+    const { title, body, icon } = payload.notification || {};
+    const notificationTitle = title || 'MFC Order Update';
+    const notificationOptions = {
+      body: body || 'Your order status has been updated!',
+      icon: icon || '/icon-512.png',
+      badge: '/icon-192.png',
+      vibrate: [200, 100, 200],
+      data: payload.data || {},
+      actions: [
+        { action: 'track', title: 'Track Order' },
+        { action: 'dismiss', title: 'Dismiss' },
+      ],
+    };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
+    self.registration.showNotification(notificationTitle, notificationOptions);
+  });
+}
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();

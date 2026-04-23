@@ -1,60 +1,45 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { Image as ImageIcon, IndianRupee, Loader2, Phone, Save, Store } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Save, Store, Phone, MapPin, Image as ImageIcon, IndianRupee, Clock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ImageUpload } from "@/components/ImageUpload";
+import type { StoreSettings } from "@/types/app";
+
+type EditableSettings = StoreSettings & {
+  brand_name: string | null;
+  brand_logo_url: string | null;
+};
 
 export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState<any>(null);
-
-  const fetchSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("mfc_store_settings")
-        .select("*")
-        .single();
-        
-      if (error && error.code !== 'PGRST116') throw error;
-      
-      if (data) {
-        setSettings(data);
-      } else {
-        const defaultSettings = { 
-          brand_name: 'MFC Food',
-          is_open: true,
-          use_scheduled_hours: false,
-          packaging_fee: 60,
-          base_delivery_fee: 100,
-          per_km_delivery_fee: 50,
-        };
-        const { data: newData, error: insertError } = await supabase
-          .from("mfc_store_settings")
-          .insert(defaultSettings)
-          .select()
-          .single();
-        
-        if (insertError) throw insertError;
-        setSettings(newData);
-      }
-    } catch (err: any) {
-      toast.error("Failed to load settings: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [settings, setSettings] = useState<EditableSettings | null>(null);
 
   useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const { data, error } = await supabase.from("mfc_store_settings").select("*").single();
+        if (error) throw error;
+        setSettings(data as EditableSettings);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load settings";
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     fetchSettings();
   }, []);
 
   const handleSave = async () => {
+    if (!settings) return;
     setSaving(true);
+
     try {
       const { error } = await supabase
         .from("mfc_store_settings")
@@ -68,20 +53,22 @@ export default function AdminSettings() {
           packaging_fee: settings.packaging_fee,
           base_delivery_fee: settings.base_delivery_fee,
           per_km_delivery_fee: settings.per_km_delivery_fee,
-          working_hours: settings.working_hours,
+          opening_time: settings.opening_time,
+          closing_time: settings.closing_time,
         })
         .eq("id", settings.id);
-        
+
       if (error) throw error;
       toast.success("Settings saved successfully");
-    } catch (err: any) {
-      toast.error("Failed to save settings: " + err.message);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save settings";
+      toast.error(message);
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
+  if (loading || !settings) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin w-8 text-zinc-500" /></div>;
   }
 
@@ -93,36 +80,36 @@ export default function AdminSettings() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* OPERATIONAL STATUS */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6 shadow-sm">
           <h2 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
             <Store size={20} className="text-[#FF5A00]" /> Operations
           </h2>
-          
           <div className="flex items-center justify-between p-4 bg-zinc-950 rounded-xl border border-zinc-800">
             <div>
               <h3 className="font-medium text-zinc-200">Manual Open/Close</h3>
               <p className="text-xs text-zinc-500">Forcefully open or close the store now.</p>
             </div>
-            <Switch 
-              checked={settings.is_open} 
-              onCheckedChange={(val) => setSettings({...settings, is_open: val})} 
-            />
+            <Switch checked={Boolean(settings.is_open)} onCheckedChange={(value) => setSettings({ ...settings, is_open: value })} />
           </div>
-
           <div className="flex items-center justify-between p-4 bg-zinc-950 rounded-xl border border-zinc-800">
             <div>
               <h3 className="font-medium text-zinc-200">Scheduled Hours</h3>
-              <p className="text-xs text-zinc-500">Automatically open/close based on time.</p>
+              <p className="text-xs text-zinc-500">Automatically open or close based on configured time.</p>
             </div>
-            <Switch 
-              checked={settings.use_scheduled_hours} 
-              onCheckedChange={(val) => setSettings({...settings, use_scheduled_hours: val})} 
-            />
+            <Switch checked={Boolean(settings.use_scheduled_hours)} onCheckedChange={(value) => setSettings({ ...settings, use_scheduled_hours: value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label className="text-zinc-400">Opening Time</Label>
+              <Input type="time" value={settings.opening_time || ""} onChange={(event) => setSettings({ ...settings, opening_time: event.target.value })} className="bg-zinc-950 border-zinc-800" />
+            </div>
+            <div className="grid gap-2">
+              <Label className="text-zinc-400">Closing Time</Label>
+              <Input type="time" value={settings.closing_time || ""} onChange={(event) => setSettings({ ...settings, closing_time: event.target.value })} className="bg-zinc-950 border-zinc-800" />
+            </div>
           </div>
         </div>
 
-        {/* BRANDING */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6 shadow-sm">
           <h2 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
             <ImageIcon size={20} className="text-[#FF5A00]" /> Branding
@@ -130,60 +117,35 @@ export default function AdminSettings() {
           <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="brandName" className="text-zinc-400">Brand Name</Label>
-              <Input 
-                id="brandName"
-                value={settings.brand_name || ''} 
-                onChange={(e) => setSettings({...settings, brand_name: e.target.value})} 
-                className="bg-zinc-950 border-zinc-800"
-              />
+              <Input id="brandName" value={settings.brand_name || ""} onChange={(event) => setSettings({ ...settings, brand_name: event.target.value })} className="bg-zinc-950 border-zinc-800" />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="logoUrl" className="text-zinc-400">Logo Image URL</Label>
-              <ImageUpload
-                value={settings.brand_logo_url || ''}
-                onChange={(url) => setSettings({...settings, brand_logo_url: url})}
-              />
+              <Label htmlFor="logoUrl" className="text-zinc-400">Logo Image</Label>
+              <ImageUpload value={settings.brand_logo_url || ""} onChange={(url) => setSettings({ ...settings, brand_logo_url: url })} />
             </div>
           </div>
         </div>
 
-        {/* DELIVERY PRICING */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6 shadow-sm">
           <h2 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
             <IndianRupee size={20} className="text-[#FF5A00]" /> Delivery Pricing
           </h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label className="text-zinc-400 text-xs uppercase letter-spacing-wider">Base Fee</Label>
-              <Input 
-                type="number"
-                value={settings.base_delivery_fee} 
-                onChange={(e) => setSettings({...settings, base_delivery_fee: Number(e.target.value)})} 
-                className="bg-zinc-950 border-zinc-800"
-              />
+              <Label className="text-zinc-400">Base Fee</Label>
+              <Input type="number" value={settings.base_delivery_fee} onChange={(event) => setSettings({ ...settings, base_delivery_fee: Number(event.target.value) })} className="bg-zinc-950 border-zinc-800" />
             </div>
             <div className="grid gap-2">
-              <Label className="text-zinc-400 text-xs uppercase letter-spacing-wider">Per KM Fee</Label>
-              <Input 
-                type="number"
-                value={settings.per_km_delivery_fee} 
-                onChange={(e) => setSettings({...settings, per_km_delivery_fee: Number(e.target.value)})} 
-                className="bg-zinc-950 border-zinc-800"
-              />
+              <Label className="text-zinc-400">Per KM Fee</Label>
+              <Input type="number" value={settings.per_km_delivery_fee} onChange={(event) => setSettings({ ...settings, per_km_delivery_fee: Number(event.target.value) })} className="bg-zinc-950 border-zinc-800" />
             </div>
             <div className="grid gap-2 col-span-2">
-              <Label className="text-zinc-400 text-xs uppercase letter-spacing-wider">Packaging Fee</Label>
-              <Input 
-                type="number"
-                value={settings.packaging_fee} 
-                onChange={(e) => setSettings({...settings, packaging_fee: Number(e.target.value)})} 
-                className="bg-zinc-950 border-zinc-800"
-              />
+              <Label className="text-zinc-400">Packaging Fee</Label>
+              <Input type="number" value={settings.packaging_fee} onChange={(event) => setSettings({ ...settings, packaging_fee: Number(event.target.value) })} className="bg-zinc-950 border-zinc-800" />
             </div>
           </div>
         </div>
 
-        {/* SUPPORT CONTACTS */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6 shadow-sm">
           <h2 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
             <Phone size={20} className="text-[#FF5A00]" /> Support Contacts
@@ -191,30 +153,18 @@ export default function AdminSettings() {
           <div className="space-y-4">
             <div className="grid gap-2">
               <Label className="text-zinc-400">WhatsApp Primary</Label>
-              <Input 
-                value={settings.whatsapp_primary || ''} 
-                onChange={(e) => setSettings({...settings, whatsapp_primary: e.target.value})} 
-                className="bg-zinc-950 border-zinc-800"
-              />
+              <Input value={settings.whatsapp_primary || ""} onChange={(event) => setSettings({ ...settings, whatsapp_primary: event.target.value })} className="bg-zinc-950 border-zinc-800" />
             </div>
             <div className="grid gap-2">
               <Label className="text-zinc-400">WhatsApp Secondary</Label>
-              <Input 
-                value={settings.whatsapp_secondary || ''} 
-                onChange={(e) => setSettings({...settings, whatsapp_secondary: e.target.value})} 
-                className="bg-zinc-950 border-zinc-800"
-              />
+              <Input value={settings.whatsapp_secondary || ""} onChange={(event) => setSettings({ ...settings, whatsapp_secondary: event.target.value })} className="bg-zinc-950 border-zinc-800" />
             </div>
           </div>
         </div>
       </div>
 
       <div className="sticky bottom-6 flex justify-end">
-        <Button 
-          onClick={handleSave} 
-          disabled={saving}
-          className="bg-[#FF5A00] hover:bg-[#e04f00] text-white px-10 h-14 rounded-2xl shadow-xl shadow-orange-950/20 text-lg font-bold"
-        >
+        <Button onClick={handleSave} disabled={saving} className="bg-[#FF5A00] hover:bg-[#e04f00] text-white px-10 h-14 rounded-2xl shadow-xl shadow-orange-950/20 text-lg font-bold">
           {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
           Save All Changes
         </Button>

@@ -10,7 +10,7 @@ interface Props {
   bucket?: string;
 }
 
-export function ImageUpload({ value, onChange, bucket = 'public_assets' }: Props) {
+export function ImageUpload({ value, onChange, bucket = 'product-images' }: Props) {
   const [uploading, setUploading] = useState(false);
 
   const uploadImage = async (event: React.ChangeEvent<HTMLInputElement>) => {

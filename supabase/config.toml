@@ -4,16 +4,16 @@ project_id = "jwflhzyqcmwmehnhvbwf"
 verify_jwt = false
 
 [functions.create-admin]
-verify_jwt = false
+verify_jwt = true
 
 [functions.push-subscribe]
 verify_jwt = false
 
 [functions.send-notification]
-verify_jwt = false
+verify_jwt = true
 
 [functions.forward-order-to-hub]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-hub-order-status]
-verify_jwt = false
+verify_jwt = true

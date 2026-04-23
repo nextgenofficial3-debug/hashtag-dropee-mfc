@@ -141,6 +141,14 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AdminPage({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedAdminRoute>
+      <AdminLayout>{children}</AdminLayout>
+    </ProtectedAdminRoute>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -166,23 +174,12 @@ const App = () => (
             <Route path="/orders/:orderId" element={<OnboardingGuard><OrderTracking /></OnboardingGuard>} />
             
             {/* Admin Routes */}
-            <Route 
-              path="/admin/*" 
-              element={
-                <ProtectedAdminRoute>
-                  <AdminLayout>
-                    <Routes>
-                      <Route path="/" element={<AdminDashboard />} />
-                      <Route path="/orders" element={<AdminOrders />} />
-                      <Route path="/reservations" element={<AdminReservations />} />
-                      <Route path="/menu" element={<AdminMenu />} />
-                      <Route path="/whitelist" element={<AdminWhitelist />} />
-                      <Route path="/settings" element={<AdminSettings />} />
-                    </Routes>
-                  </AdminLayout>
-                </ProtectedAdminRoute>
-              } 
-            />
+            <Route path="/admin" element={<AdminPage><AdminDashboard /></AdminPage>} />
+            <Route path="/admin/orders" element={<AdminPage><AdminOrders /></AdminPage>} />
+            <Route path="/admin/reservations" element={<AdminPage><AdminReservations /></AdminPage>} />
+            <Route path="/admin/menu" element={<AdminPage><AdminMenu /></AdminPage>} />
+            <Route path="/admin/whitelist" element={<AdminPage><AdminWhitelist /></AdminPage>} />
+            <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
           </Routes>
           <DownloadAppPrompt />
         </AuthProvider>

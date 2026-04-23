@@ -1,19 +1,30 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { MenuItem } from '@/types/app';
 
-export function useProducts(shopId?: string) {
-  const [products, setProducts] = useState<any[]>([]);
+export function useProducts(categoryId?: string) {
+  const [products, setProducts] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let query = supabase.from('MS_menu_items').select('*').eq('is_available', true);
-    if (shopId) query = query.eq('shop_id', shopId);
-    
-    query.order('sort_order').order('name').then(({ data }) => {
-      setProducts(data || []);
-      setLoading(false);
-    });
-  }, [shopId]);
+    setLoading(true);
+
+    let query = supabase
+      .from('mfc_menu_items')
+      .select('*')
+      .eq('is_available', true);
+
+    if (categoryId) {
+      query = query.eq('category_id', categoryId);
+    }
+
+    query
+      .order('name')
+      .then(({ data }) => {
+        setProducts(data || []);
+        setLoading(false);
+      });
+  }, [categoryId]);
 
 
   return { products, loading };

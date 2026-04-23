@@ -1,26 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { Check, Clock, Edit2, LogOut, MapPin, Receipt, ShieldAlert, User, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCustomerOrders } from "@/hooks/useCustomerOrders";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useNavigate } from "react-router-dom";
-import { LogOut, User, MapPin, Receipt, Clock, ShieldAlert, Edit2, Check, X } from "lucide-react";
+import type { UserAddress } from "@/types/app";
 
 export default function Profile() {
   const { user, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
-  
+  const { orders } = useCustomerOrders(user?.id);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [addressId, setAddressId] = useState<string | null>(null);
-  
-  const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -29,30 +28,21 @@ export default function Profile() {
     setPhone(user.user_metadata?.phone || "");
 
     async function fetchProfileData() {
-      // 1. Fetch Address
       const { data: addressData } = await supabase
-        .from("user_addresses")
-        .select("id, full_address")
-        .eq("user_id", user?.id)
+        .from("mfc_user_addresses")
+        .select("*")
+        .eq("user_id", user.id)
         .eq("is_default", true)
         .maybeSingle();
-      
+
       if (addressData) {
-        setAddress(addressData.full_address);
-        setAddressId(addressData.id);
+        const currentAddress = addressData as UserAddress;
+        setAddress(currentAddress.full_address);
+        setAddressId(currentAddress.id);
       } else {
         setAddress("");
+        setAddressId(null);
       }
-
-      // 2. Fetch Orders (Recent 3)
-      const { data: ordersData } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false })
-        .limit(3);
-
-      if (ordersData) setOrders(ordersData);
     }
 
     fetchProfileData();
@@ -60,54 +50,47 @@ export default function Profile() {
 
   const handleSave = async () => {
     if (!user) return;
+
     setLoading(true);
     try {
-      // Update Auth Metadata
-      const { error: authErr } = await supabase.auth.updateUser({
-        data: { full_name: name, phone: phone },
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { full_name: name, phone },
       });
-      if (authErr) throw authErr;
 
-      // Update or Insert Address
+      if (authError) throw authError;
+
       if (address.trim()) {
         if (addressId) {
-          const { error: addressErr } = await supabase
-            .from("user_addresses")
+          const { error } = await supabase
+            .from("mfc_user_addresses")
             .update({ full_address: address })
             .eq("id", addressId);
-          if (addressErr) throw addressErr;
+
+          if (error) throw error;
         } else {
-          const { data: newAddr, error: insertErr } = await supabase
-            .from("user_addresses")
+          const { data, error } = await supabase
+            .from("mfc_user_addresses")
             .insert({
               user_id: user.id,
               full_address: address,
               is_default: true,
-              address_type: "Home"
+              address_type: "Home",
             })
             .select()
             .single();
-          if (insertErr) throw insertErr;
-          if (newAddr) setAddressId(newAddr.id);
+
+          if (error) throw error;
+          setAddressId(data.id);
         }
       }
-      
-      toast.success("Profile updated successfully!");
+
+      toast.success("Profile updated successfully");
       setIsEditing(false);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update profile");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update profile";
+      toast.error(message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate("/");
-      toast.success("Logged out successfully");
-    } catch (error) {
-      toast.error("Error logging out");
     }
   };
 
@@ -146,27 +129,26 @@ export default function Profile() {
         )}
       </div>
 
-      {/* User Info Form/Card */}
       <div className="bg-card border border-border rounded-3xl p-6 shadow-sm mb-6 relative overflow-hidden">
-        {isAdmin && (
-           <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-bl-xl z-10">
-             ADMIN
-           </div>
-        )}
-        
+        {isAdmin ? (
+          <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-bl-xl z-10">
+            ADMIN
+          </div>
+        ) : null}
+
         {isEditing ? (
           <div className="space-y-4 pt-2">
             <div className="space-y-1">
               <Label>Full Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+              <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" />
             </div>
             <div className="space-y-1">
               <Label>Phone Number</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Your phone number" type="tel" />
+              <Input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Your phone number" type="tel" />
             </div>
             <div className="space-y-1">
               <Label>Default Address</Label>
-              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Your full address" />
+              <Input value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Your full address" />
             </div>
           </div>
         ) : (
@@ -184,8 +166,7 @@ export default function Profile() {
       </div>
 
       <div className="space-y-6">
-        {/* Quick Links */}
-        {!isEditing && (
+        {!isEditing ? (
           <section className="space-y-3">
             <h3 className="font-bold text-lg">Account</h3>
             <div className="bg-muted/40 border border-border p-4 rounded-2xl flex items-center gap-4">
@@ -198,27 +179,23 @@ export default function Profile() {
               </div>
             </div>
           </section>
-        )}
+        ) : null}
 
-        {isAdmin && (
-          <Button 
-             variant="outline" 
-             className="w-full h-14 rounded-2xl border-primary text-primary hover:bg-primary/5"
-             onClick={() => navigate("/admin")}
+        {isAdmin ? (
+          <Button
+            variant="outline"
+            className="w-full h-14 rounded-2xl border-primary text-primary hover:bg-primary/5"
+            onClick={() => navigate("/admin")}
           >
-             <ShieldAlert className="w-5 h-5 mr-2" />
-             Open Admin Command Center
+            <ShieldAlert className="w-5 h-5 mr-2" />
+            Open Admin Command Center
           </Button>
-        )}
+        ) : null}
 
-        {/* Recent Orders */}
         <section className="space-y-4">
           <div className="flex justify-between items-end">
             <h3 className="font-bold text-lg">Recent Orders</h3>
-            <span 
-              className="text-sm font-medium text-primary cursor-pointer hover:underline"
-              onClick={() => navigate("/orders")}
-            >
+            <span className="text-sm font-medium text-primary cursor-pointer hover:underline" onClick={() => navigate("/orders")}>
               View All
             </span>
           </div>
@@ -226,31 +203,33 @@ export default function Profile() {
           <div className="space-y-3">
             {orders.length === 0 ? (
               <div className="p-6 text-center border-2 border-dashed border-border rounded-3xl bg-muted/20 flex flex-col items-center">
-                 <Receipt className="w-8 h-8 text-muted-foreground/30 mb-2" />
-                 <p className="text-sm text-muted-foreground">No recent orders</p>
-                 <Button variant="link" onClick={() => navigate("/shop")} className="mt-2 text-primary">Start ordering</Button>
+                <Receipt className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                <p className="text-sm text-muted-foreground">No recent orders</p>
+                <Button variant="link" onClick={() => navigate("/shop")} className="mt-2 text-primary">Start ordering</Button>
               </div>
             ) : (
-              orders.map((order) => (
-                <div 
-                  key={order.id} 
+              orders.slice(0, 3).map((order) => (
+                <div
+                  key={`${order.kind}-${order.id}`}
                   className="p-4 bg-card border border-border rounded-2xl shadow-sm cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => navigate(`/orders/${order.id}`)}
+                  onClick={() => navigate(`/orders/${order.id}?kind=${order.kind}`)}
                 >
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-bold text-sm">Order #{order.id.slice(0, 8)}</span>
+                    <span className="font-bold text-sm">
+                      {order.kind === "food" ? "Food Order" : "Delivery"} #{order.id.slice(0, 8)}
+                    </span>
                     <span className="text-xs font-semibold px-2 py-1 bg-muted rounded-md uppercase">
                       {order.status}
                     </span>
                   </div>
                   <div className="flex justify-between items-end">
-                     <div>
-                       <p className="text-xs text-muted-foreground flex items-center gap-1">
-                         <Clock className="w-3 h-3" />
-                         {new Date(order.created_at).toLocaleDateString()}
-                       </p>
-                     </div>
-                     <span className="font-bold text-primary">₹{order.total_amount}</span>
+                    <div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {new Date(order.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className="font-bold text-primary">₹{order.total || 0}</span>
                   </div>
                 </div>
               ))
@@ -259,7 +238,11 @@ export default function Profile() {
         </section>
 
         <section className="pt-6">
-          <Button variant="destructive" className="w-full h-14 rounded-2xl text-base font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20" onClick={handleSignOut}>
+          <Button
+            variant="destructive"
+            className="w-full h-14 rounded-2xl text-base font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20"
+            onClick={() => void signOut()}
+          >
             <LogOut className="w-5 h-5 mr-2" />
             Logout
           </Button>

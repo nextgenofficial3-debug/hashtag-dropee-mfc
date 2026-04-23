@@ -1,16 +1,23 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
+import { env, hasFirebaseMessagingEnv } from './env';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCExdszDcQzhJHoUvOqVlRwyfqfKkoA3kY",
-  authDomain: "webapp-af75d.firebaseapp.com",
-  projectId: "webapp-af75d",
-  storageBucket: "webapp-af75d.firebasestorage.app",
-  messagingSenderId: "52507263282",
-  appId: "1:52507263282:web:da4df9b6e02b2d23e8d72b",
-  measurementId: "G-B205PFD37F",
-};
+const firebaseConfig = hasFirebaseMessagingEnv()
+  ? {
+      apiKey: env.firebase.apiKey!,
+      authDomain: env.firebase.authDomain!,
+      projectId: env.firebase.projectId!,
+      storageBucket: env.firebase.storageBucket!,
+      messagingSenderId: env.firebase.messagingSenderId!,
+      appId: env.firebase.appId!,
+      measurementId: env.firebase.measurementId,
+    }
+  : null;
 
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const app = firebaseConfig
+  ? getApps().length
+    ? getApps()[0]
+    : initializeApp(firebaseConfig)
+  : null;
 
 export { app, getMessaging, getToken, onMessage, isSupported };

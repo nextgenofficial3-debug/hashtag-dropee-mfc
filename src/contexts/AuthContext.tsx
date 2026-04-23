@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, Session } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 type UserRole = "admin" | "moderator" | "agent" | "user" | "super_admin";
@@ -24,11 +24,23 @@ const AuthContext = createContext<AuthContextType>({
   isOnboarded: false,
   loading: true,
   authError: null,
-  signInWithGoogle: async () => {},
-  signOut: async () => {},
+  signInWithGoogle: async () => undefined,
+  signOut: async () => undefined,
 });
 
 export const useAuth = () => useContext(AuthContext);
+
+async function resolveRole(user: User): Promise<UserRole | null> {
+  const [{ data: explicitRole }, { data: whitelistRole }] = await Promise.all([
+    supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
+    user.email
+      ? supabase.from("mfc_admin_whitelist").select("role").eq("email", user.email.toLowerCase()).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const role = (explicitRole?.role || whitelistRole?.role) as UserRole | undefined;
+  return role || null;
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -37,73 +49,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const checkAdminStatus = async (email: string | undefined) => {
-    if (email === "hashtagdropee@gmail.com") {
-      setRole("super_admin");
-      return;
-    }
-
-    if (!email) {
-      setRole(null);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from("mfc_admin_whitelist")
-        .select("role")
-        .eq("email", email)
-        .single();
-
-      if (data && !error) {
-        setRole(data.role as UserRole);
-      } else {
-        setRole(null);
-      }
-    } catch (err) {
-      console.error("Failed to fetch admin status MFC", err);
-      setRole(null);
-    }
-    // Note: NO setLoading(false) here — loading is only cleared in INITIAL_SESSION handler
-  };
-
   useEffect(() => {
     let mounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        if (!mounted) return;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (!mounted) return;
 
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-          setSession(currentSession);
-          const currentUser = currentSession?.user ?? null;
-          setUser(currentUser);
-          
-          if (currentUser) {
-            await checkAdminStatus(currentUser.email);
-          } else {
-            setRole(null);
-          }
+      setAuthError(null);
+      setSession(currentSession);
 
-          // Clear stale cache on sign in
-          if (event === 'SIGNED_IN' && 'caches' in window) {
-            caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+      const currentUser = currentSession?.user ?? null;
+      setUser(currentUser);
+
+      try {
+        if (currentUser) {
+          const resolvedRole = await resolveRole(currentUser);
+          if (mounted) {
+            setRole(resolvedRole);
           }
-          if (mounted) setLoading(false);
-        } else if (event === 'SIGNED_OUT') {
-          setSession(null);
-          setUser(null);
+        } else {
           setRole(null);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to verify session";
+        if (mounted) {
+          setAuthError(message);
+          setRole(null);
+        }
+      } finally {
+        if (mounted) {
           setLoading(false);
-        } else if (event === 'TOKEN_REFRESHED') {
-          setSession(currentSession);
         }
       }
-    );
 
-    // Hard fallback — never spin forever
+      if (event === "SIGNED_IN" && "caches" in window) {
+        void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+      }
+    });
+
     const fallback = setTimeout(() => {
-      if (mounted) setLoading(false);
+      if (mounted) {
+        setLoading(false);
+      }
     }, 8000);
 
     return () => {
@@ -119,30 +108,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
+
       if (error) throw error;
-    } catch (err: any) {
-      console.error("Google sign-in error MFC:", err);
-      setAuthError(err.message || "Failed to start Google sign-in");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to start Google sign-in";
+      setAuthError(message);
     }
   };
 
   const signOut = async () => {
     try {
-      if ('caches' in window) {
+      if ("caches" in window) {
         const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
+        await Promise.all(keys.map((key) => caches.delete(key)));
       }
+
       await supabase.auth.signOut();
     } finally {
-      window.location.href = '/login'; // hard redirect always
+      window.location.href = "/auth/login";
     }
   };
 
   const isAdmin = role === "admin" || role === "super_admin";
-  const isOnboarded = !!user?.user_metadata?.onboarded;
+  const isOnboarded = Boolean(user?.user_metadata?.onboarded);
 
   return (
     <AuthContext.Provider value={{ user, session, role, isAdmin, isOnboarded, loading, authError, signInWithGoogle, signOut }}>

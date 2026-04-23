@@ -204,6 +204,7 @@ export type Database = {
           created_at: string
           customer_name: string
           customer_phone: string | null
+          customer_user_id: string | null
           delivery_address: string
           delivery_lat: number | null
           delivery_lng: number | null
@@ -235,6 +236,7 @@ export type Database = {
           created_at?: string
           customer_name: string
           customer_phone?: string | null
+          customer_user_id?: string | null
           delivery_address: string
           delivery_lat?: number | null
           delivery_lng?: number | null
@@ -266,6 +268,7 @@ export type Database = {
           created_at?: string
           customer_name?: string
           customer_phone?: string | null
+          customer_user_id?: string | null
           delivery_address?: string
           delivery_lat?: number | null
           delivery_lng?: number | null
@@ -454,6 +457,27 @@ export type Database = {
         }
         Relationships: []
       }
+      mfc_admin_whitelist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       mfc_menu_items: {
         Row: {
           category_id: string | null
@@ -513,6 +537,7 @@ export type Database = {
           status: string
           subtotal: number
           total: number
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -528,6 +553,7 @@ export type Database = {
           status?: string
           subtotal: number
           total: number
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -543,6 +569,7 @@ export type Database = {
           status?: string
           subtotal?: number
           total?: number
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -635,6 +662,42 @@ export type Database = {
           title?: string
           valid_from?: string | null
           valid_until?: string | null
+        }
+        Relationships: []
+      }
+      mfc_reservations: {
+        Row: {
+          created_at: string
+          id: string
+          people_count: number
+          reservation_time: string
+          special_requests: string | null
+          status: string
+          table_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          people_count: number
+          reservation_time: string
+          special_requests?: string | null
+          status?: string
+          table_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          people_count?: number
+          reservation_time?: string
+          special_requests?: string | null
+          status?: string
+          table_type?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -775,6 +838,8 @@ export type Database = {
           admin_password_hash: string
           average_rating: string | null
           base_delivery_fee: number
+          brand_logo_url: string | null
+          brand_name: string | null
           closing_time: string | null
           customers_served: string | null
           id: string
@@ -795,6 +860,8 @@ export type Database = {
           admin_password_hash?: string
           average_rating?: string | null
           base_delivery_fee?: number
+          brand_logo_url?: string | null
+          brand_name?: string | null
           closing_time?: string | null
           customers_served?: string | null
           id?: string
@@ -815,6 +882,8 @@ export type Database = {
           admin_password_hash?: string
           average_rating?: string | null
           base_delivery_fee?: number
+          brand_logo_url?: string | null
+          brand_name?: string | null
           closing_time?: string | null
           customers_served?: string | null
           id?: string

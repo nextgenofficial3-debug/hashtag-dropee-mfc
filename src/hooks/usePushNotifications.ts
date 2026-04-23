@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { env } from '@/lib/env';
 import { toast } from 'sonner';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -50,9 +51,8 @@ export function usePushNotifications() {
       }
 
       // Get VAPID public key from the shared Supabase project edge function
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/push-subscribe`,
+        `https://${env.supabase.projectId}.supabase.co/functions/v1/push-subscribe`,
         { method: 'GET' }
       );
       const { publicKey } = await res.json();
@@ -71,7 +71,7 @@ export function usePushNotifications() {
 
       // Save subscription to shared backend (mfc_push_subscriptions)
       const saveRes = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/push-subscribe`,
+        `https://${env.supabase.projectId}.supabase.co/functions/v1/push-subscribe`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -85,8 +85,9 @@ export function usePushNotifications() {
       } else {
         toast.error('Failed to save subscription');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to subscribe');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to subscribe';
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -122,9 +123,8 @@ export function usePushNotifications() {
         return;
       }
 
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/send-notification`,
+        `https://${env.supabase.projectId}.supabase.co/functions/v1/send-notification`,
         {
           method: 'POST',
           headers: {
@@ -142,8 +142,9 @@ export function usePushNotifications() {
         toast.error(result.error || 'Failed to send');
       }
       return result;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to send notification');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to send notification';
+      toast.error(message);
     }
   }, []);
 
