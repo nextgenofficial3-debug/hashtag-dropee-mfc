@@ -1,5 +1,5 @@
 import React from "react";
-import { Bell, BellOff, CheckCheck, X } from "lucide-react";
+import { Bell, BellOff, CheckCheck } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -47,9 +47,10 @@ export function NotificationsSheet({
 }: NotificationsSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-sm p-0 flex flex-col">
+      {/* hideClose keeps the built-in X; we use it so there's only one X */}
+      <SheetContent side="right" className="w-full max-w-sm p-0 flex flex-col" hideClose>
         {/* Header */}
-        <SheetHeader className="px-4 pt-5 pb-3 border-b border-border/60 flex-row items-center justify-between space-y-0">
+        <SheetHeader className="px-4 pt-5 pb-3 border-b border-border/60 flex-row items-center justify-between space-y-0 pr-10">
           <SheetTitle className="text-lg font-extrabold flex items-center gap-2">
             <Bell className="w-5 h-5 text-primary" />
             Notifications
@@ -59,27 +60,17 @@ export function NotificationsSheet({
               </span>
             )}
           </SheetTitle>
-          <div className="flex items-center gap-1">
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground h-8 px-2"
-                onClick={onMarkAllRead}
-              >
-                <CheckCheck className="w-3.5 h-3.5 mr-1" />
-                Mark all read
-              </Button>
-            )}
+          {unreadCount > 0 && (
             <Button
               variant="ghost"
-              size="icon"
-              className="w-8 h-8"
-              onClick={() => onOpenChange(false)}
+              size="sm"
+              className="text-xs text-muted-foreground h-8 px-2 shrink-0"
+              onClick={onMarkAllRead}
             >
-              <X className="w-4 h-4" />
+              <CheckCheck className="w-3.5 h-3.5 mr-1" />
+              Mark all read
             </Button>
-          </div>
+          )}
         </SheetHeader>
 
         {/* Body */}
@@ -119,20 +110,14 @@ export function NotificationsSheet({
                       border ${n.is_read ? "border-transparent" : "border-primary/10"}`}
                     onClick={() => !n.is_read && onMarkRead(n.id)}
                   >
-                    {/* Type dot / icon */}
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${style.bg}`}
-                    >
+                    {/* Type dot */}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${style.bg}`}>
                       <span className={`w-3 h-3 rounded-full ${style.dot}`} />
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p
-                          className={`text-sm font-semibold leading-snug ${
-                            n.is_read ? "text-muted-foreground" : "text-foreground"
-                          }`}
-                        >
+                        <p className={`text-sm font-semibold leading-snug ${n.is_read ? "text-muted-foreground" : "text-foreground"}`}>
                           {n.title}
                         </p>
                         {!n.is_read && (
@@ -140,9 +125,7 @@ export function NotificationsSheet({
                         )}
                       </div>
                       {n.message && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                          {n.message}
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
                       )}
                       <p className="text-[10px] text-muted-foreground/60 mt-1.5">
                         {timeAgo(n.created_at)}

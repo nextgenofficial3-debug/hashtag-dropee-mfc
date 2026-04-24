@@ -53,6 +53,23 @@ const defaultAddressForm: AddressFormState = {
   is_default: false,
 };
 
+// ── Local profile storage (instant save, no network wait) ──────────────────
+const PROFILE_KEY = (uid: string) => `mfc_profile_${uid}`;
+
+function loadLocalProfile(uid: string): { name: string; phone: string } {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY(uid));
+    if (raw) return JSON.parse(raw) as { name: string; phone: string };
+  } catch { /* ignore */ }
+  return { name: "", phone: "" };
+}
+
+function saveLocalProfile(uid: string, name: string, phone: string) {
+  try {
+    localStorage.setItem(PROFILE_KEY(uid), JSON.stringify({ name, phone }));
+  } catch { /* ignore */ }
+}
+
 export default function Profile() {
   const { user, signOut, isAdmin, refreshRole } = useAuth();
   const navigate = useNavigate();
@@ -75,11 +92,13 @@ export default function Profile() {
   }>({ open: false, mode: "add", form: defaultAddressForm });
   const [addressSaving, setAddressSaving] = useState(false);
 
-  // ── Load profile data ──────────────────────────────────────────────────────
-  const loadProfile = useCallback(async () => {
+  // ── Load profile ───────────────────────────────────────────────────────────
+  const loadProfile = useCallback(() => {
     if (!user) return;
-    setName(user.user_metadata?.full_name || "");
-    setPhone(user.user_metadata?.phone || "");
+    // Try localStorage first (instant), fall back to Google metadata
+    const local = loadLocalProfile(user.id);
+    setName(local.name || user.user_metadata?.full_name || "");
+    setPhone(local.phone || user.user_metadata?.phone || "");
   }, [user]);
 
   const loadAddresses = useCallback(async () => {
@@ -96,37 +115,38 @@ export default function Profile() {
   }, [user]);
 
   useEffect(() => {
-    void loadProfile();
+    loadProfile();
     void loadAddresses();
-    // Also re-check admin role in case it wasn't resolved yet
     void refreshRole?.();
   }, [loadProfile, loadAddresses, refreshRole]);
 
-  // ── Save profile (name + phone) ────────────────────────────────────────────
+  // ── Save profile — instant via localStorage, async Supabase sync ───────────
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: { full_name: name, phone },
-      });
-      if (error) throw error;
-      toast.success("Profile updated successfully");
-      setIsEditing(false);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update profile";
-      toast.error(message);
-    } finally {
-      setSaving(false);
-    }
+
+    // 1. Save to localStorage immediately — instant feedback
+    saveLocalProfile(user.id, name, phone);
+    toast.success("Profile saved!");
+    setIsEditing(false);
+    setSaving(false);
+
+    // 2. Attempt background sync to Supabase auth (best-effort, no spinner)
+    void supabase.auth.updateUser({ data: { full_name: name, phone } }).catch((err) => {
+      console.warn("[Profile] Background auth sync failed:", err);
+    });
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    loadProfile(); // revert edits
   };
 
   // ── Address helpers ────────────────────────────────────────────────────────
-  const openAddDialog = () => {
+  const openAddDialog = () =>
     setAddressDialog({ open: true, mode: "add", form: { ...defaultAddressForm } });
-  };
 
-  const openEditDialog = (addr: UserAddress) => {
+  const openEditDialog = (addr: UserAddress) =>
     setAddressDialog({
       open: true,
       mode: "edit",
@@ -137,7 +157,6 @@ export default function Profile() {
         is_default: addr.is_default,
       },
     });
-  };
 
   const closeDialog = () =>
     setAddressDialog((prev) => ({ ...prev, open: false }));
@@ -151,7 +170,6 @@ export default function Profile() {
     }
     setAddressSaving(true);
     try {
-      // If setting as default, unset others first
       if (form.is_default) {
         await supabase
           .from("mfc_user_addresses")
@@ -171,7 +189,6 @@ export default function Profile() {
         if (error) throw error;
         toast.success("Address updated");
       } else {
-        // Ensure first address is default
         const isFirst = addresses.length === 0;
         const { error } = await supabase.from("mfc_user_addresses").insert({
           user_id: user.id,
@@ -196,14 +213,8 @@ export default function Profile() {
   const handleSetDefault = async (addr: UserAddress) => {
     if (!user || addr.is_default) return;
     try {
-      await supabase
-        .from("mfc_user_addresses")
-        .update({ is_default: false })
-        .eq("user_id", user.id);
-      await supabase
-        .from("mfc_user_addresses")
-        .update({ is_default: true })
-        .eq("id", addr.id);
+      await supabase.from("mfc_user_addresses").update({ is_default: false }).eq("user_id", user.id);
+      await supabase.from("mfc_user_addresses").update({ is_default: true }).eq("id", addr.id);
       toast.success("Default address updated");
       await loadAddresses();
     } catch {
@@ -249,12 +260,7 @@ export default function Profile() {
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => { setIsEditing(false); void loadProfile(); }}
-              disabled={saving}
-            >
+            <Button variant="ghost" size="icon" onClick={handleCancel} disabled={saving}>
               <X className="w-5 h-5 text-muted-foreground" />
             </Button>
             <Button variant="default" size="icon" onClick={handleSave} disabled={saving}>
@@ -276,20 +282,11 @@ export default function Profile() {
           <div className="space-y-4 pt-2">
             <div className="space-y-1">
               <Label>Full Name</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-              />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
             </div>
             <div className="space-y-1">
               <Label>Phone Number</Label>
-              <Input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Your phone number"
-                type="tel"
-              />
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Your phone number" type="tel" />
             </div>
           </div>
         ) : (
@@ -300,9 +297,7 @@ export default function Profile() {
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold truncate">{name || "Guest User"}</h2>
               <p className="text-muted-foreground text-sm truncate">{user.email}</p>
-              <p className="text-muted-foreground text-xs mt-1 truncate">
-                {phone || "No phone linked"}
-              </p>
+              <p className="text-muted-foreground text-xs mt-1 truncate">{phone || "No phone linked"}</p>
             </div>
           </div>
         )}
@@ -313,91 +308,79 @@ export default function Profile() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-lg">Saved Addresses</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-primary h-8 px-2 text-xs font-semibold"
-              onClick={openAddDialog}
-            >
+            <Button variant="ghost" size="sm" className="text-primary h-8 px-2 text-xs font-semibold" onClick={openAddDialog}>
               <Plus className="w-3.5 h-3.5 mr-1" />
-              Add New
+              Add
             </Button>
           </div>
 
           {addressLoading ? (
             <div className="space-y-2">
               {[1, 2].map((i) => (
-                <div key={i} className="h-16 bg-muted/30 rounded-2xl animate-pulse" />
+                <div key={i} className="h-14 bg-muted/30 rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : addresses.length === 0 ? (
-            <div
-              className="flex items-center gap-4 border-2 border-dashed border-border rounded-2xl p-4 cursor-pointer hover:border-primary/50 transition-colors"
+            <button
               onClick={openAddDialog}
+              className="w-full flex items-center gap-3 border-2 border-dashed border-border rounded-2xl p-4 hover:border-primary/40 transition-colors text-left"
             >
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <MapPin className="w-5 h-5 text-muted-foreground" />
+              <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                <MapPin className="w-4 h-4 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-muted-foreground">No addresses saved</p>
-                <p className="text-xs text-muted-foreground">Tap to add your first address</p>
+                <p className="text-xs text-muted-foreground/70">Tap to add your first delivery address</p>
               </div>
-            </div>
+            </button>
           ) : (
             <div className="space-y-2">
               {addresses.map((addr) => (
                 <div
                   key={addr.id}
-                  className={`flex items-center gap-3 p-4 rounded-2xl border transition-all
-                    ${addr.is_default
-                      ? "bg-primary/5 border-primary/30"
-                      : "bg-muted/30 border-border hover:border-border/60"}`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all
+                    ${addr.is_default ? "bg-primary/5 border-primary/25" : "bg-muted/20 border-border"}`}
                 >
-                  {/* Type icon */}
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0
-                      ${addr.is_default ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}
-                  >
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0
+                    ${addr.is_default ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
                     {addressTypeIcon[addr.address_type as AddressType] ?? <MapPin className="w-4 h-4" />}
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold">{addr.address_type}</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold">{addr.address_type}</span>
                       {addr.is_default && (
-                        <span className="text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                        <span className="text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full leading-none">
                           Default
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{addr.full_address}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{addr.full_address}</p>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     {!addr.is_default && (
                       <button
                         title="Set as default"
                         onClick={() => void handleSetDefault(addr)}
                         className="w-8 h-8 rounded-full hover:bg-primary/10 flex items-center justify-center transition-colors"
                       >
-                        <Star className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
+                        <Star className="w-3.5 h-3.5 text-muted-foreground" />
                       </button>
                     )}
                     <button
-                      title="Edit address"
+                      title="Edit"
                       onClick={() => openEditDialog(addr)}
                       className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
                     >
                       <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
                     </button>
                     <button
-                      title="Delete address"
+                      title="Delete"
                       onClick={() => void handleDeleteAddress(addr.id)}
                       className="w-8 h-8 rounded-full hover:bg-red-500/10 flex items-center justify-center transition-colors"
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-red-500/70 hover:text-red-500" />
+                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
                     </button>
                   </div>
                 </div>
@@ -435,11 +418,7 @@ export default function Profile() {
               <div className="p-6 text-center border-2 border-dashed border-border rounded-3xl bg-muted/20 flex flex-col items-center">
                 <Receipt className="w-8 h-8 text-muted-foreground/30 mb-2" />
                 <p className="text-sm text-muted-foreground">No recent orders</p>
-                <Button
-                  variant="link"
-                  onClick={() => navigate("/shop")}
-                  className="mt-2 text-primary"
-                >
+                <Button variant="link" onClick={() => navigate("/shop")} className="mt-2 text-primary">
                   Start ordering
                 </Button>
               </div>
@@ -545,13 +524,14 @@ export default function Profile() {
                     form: { ...prev.form, is_default: !prev.form.is_default },
                   }))
                 }
-                className={`w-10 h-6 rounded-full transition-colors cursor-pointer
+                className={`w-10 h-6 rounded-full transition-colors cursor-pointer relative shrink-0
                   ${addressDialog.form.is_default ? "bg-primary" : "bg-muted"}`}
               >
                 <div
-                  className={`w-5 h-5 bg-white rounded-full shadow-sm mt-0.5 transition-transform
-                    ${addressDialog.form.is_default ? "translate-x-4.5" : "translate-x-0.5"}`}
-                  style={{ transform: addressDialog.form.is_default ? "translateX(18px)" : "translateX(2px)" }}
+                  className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform"
+                  style={{
+                    transform: addressDialog.form.is_default ? "translateX(18px)" : "translateX(2px)",
+                  }}
                 />
               </div>
               <span className="text-sm font-medium">Set as default address</span>
@@ -563,7 +543,11 @@ export default function Profile() {
               Cancel
             </Button>
             <Button onClick={() => void handleAddressSave()} disabled={addressSaving}>
-              {addressSaving ? "Saving…" : addressDialog.mode === "add" ? "Add Address" : "Save Changes"}
+              {addressSaving
+                ? "Saving…"
+                : addressDialog.mode === "add"
+                ? "Add Address"
+                : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
