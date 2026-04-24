@@ -37,7 +37,8 @@ export const useAuth = () => useContext(AuthContext);
 // hasn't been set in Supabase yet. To make it permanent, set app_metadata.role
 // = "admin" for each admin user via Supabase Dashboard → Authentication → Users.
 const ADMIN_EMAILS: string[] = [
-  // e.g. "admin@example.com",
+  "hashtagdropee@gmail.com",
+  "makyoningshen4@gmail.com",
 ];
 
 async function resolveRole(user: User): Promise<UserRole | null> {
