@@ -37,6 +37,8 @@ import AdminWhitelist from "./pages/admin/AdminWhitelist";
 import AdminPromotions from "./pages/admin/AdminPromotions";
 import AdminCoupons from "./pages/admin/AdminCoupons";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminReviews from "./pages/admin/AdminReviews";
+import AdminStoreSettings from "./pages/admin/AdminStoreSettings";
 
 const queryClient = new QueryClient();
 
@@ -188,6 +190,8 @@ const App = () => (
             <Route path="/admin/coupons" element={<AdminPage><AdminCoupons /></AdminPage>} />
             <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
             <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
+            <Route path="/admin/reviews" element={<AdminPage><AdminReviews /></AdminPage>} />
+            <Route path="/admin/store" element={<AdminPage><AdminStoreSettings /></AdminPage>} />
           </Routes>
           <DownloadAppPrompt />
         </AuthProvider>

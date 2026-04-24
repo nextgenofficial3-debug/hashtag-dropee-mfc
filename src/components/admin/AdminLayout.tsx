@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Receipt, CalendarClock, UtensilsCrossed, ShieldCheck,
   Settings, Users, Megaphone, Tag, X, Menu as MenuIcon, ShieldAlert, ChevronRight,
+  MessageSquare, Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,8 +14,10 @@ const navItems = [
   { name: "Menu",          path: "/admin/menu",           icon: UtensilsCrossed },
   { name: "Promotions",    path: "/admin/promotions",     icon: Megaphone },
   { name: "Coupons",       path: "/admin/coupons",        icon: Tag },
+  { name: "Reviews",       path: "/admin/reviews",        icon: MessageSquare },
   { name: "Users",         path: "/admin/users",          icon: Users },
   { name: "Whitelist",     path: "/admin/whitelist",      icon: ShieldCheck },
+  { name: "Store",         path: "/admin/store",          icon: Store },
   { name: "Settings",      path: "/admin/settings",       icon: Settings },
 ];
 
