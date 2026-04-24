@@ -34,6 +34,9 @@ import AdminReservations from "./pages/admin/AdminReservations";
 import AdminMenu from "./pages/admin/AdminMenu";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminWhitelist from "./pages/admin/AdminWhitelist";
+import AdminPromotions from "./pages/admin/AdminPromotions";
+import AdminCoupons from "./pages/admin/AdminCoupons";
+import AdminUsers from "./pages/admin/AdminUsers";
 
 const queryClient = new QueryClient();
 
@@ -181,6 +184,9 @@ const App = () => (
             <Route path="/admin/reservations" element={<AdminPage><AdminReservations /></AdminPage>} />
             <Route path="/admin/menu" element={<AdminPage><AdminMenu /></AdminPage>} />
             <Route path="/admin/whitelist" element={<AdminPage><AdminWhitelist /></AdminPage>} />
+            <Route path="/admin/promotions" element={<AdminPage><AdminPromotions /></AdminPage>} />
+            <Route path="/admin/coupons" element={<AdminPage><AdminCoupons /></AdminPage>} />
+            <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
             <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
           </Routes>
           <DownloadAppPrompt />
