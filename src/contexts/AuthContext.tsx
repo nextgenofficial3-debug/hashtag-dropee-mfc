@@ -32,63 +32,54 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+// ── ADMIN EMAILS ──────────────────────────────────────────────────────────────
+// Add admin email addresses here. This is the fallback when app_metadata
+// hasn't been set in Supabase yet. To make it permanent, set app_metadata.role
+// = "admin" for each admin user via Supabase Dashboard → Authentication → Users.
+const ADMIN_EMAILS: string[] = [
+  // e.g. "admin@example.com",
+];
+
 async function resolveRole(user: User): Promise<UserRole | null> {
+  // ── Step 1: Trust app_metadata.role (set server-side by Supabase/triggers) ──
+  // This is the gold standard — never overwritten by Google OAuth.
+  const appRole = user.app_metadata?.role as string | undefined;
+  if (appRole && ["admin", "super_admin", "moderator", "agent", "user"].includes(appRole)) {
+    console.log("[AuthContext] role from app_metadata:", appRole);
+    return appRole as UserRole;
+  }
+
+  // ── Step 2: Check user_roles table (with timeout guard) ───────────────────
   try {
-    // 1. Check explicit user_roles table first (most authoritative)
-    const { data: explicitRole, error: roleError } = await supabase
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+
+    const { data: roleRow, error: roleError } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .maybeSingle();
+      .maybeSingle()
+      .abortSignal(controller.signal);
+
+    clearTimeout(timer);
 
     if (roleError) {
-      console.warn("[AuthContext] user_roles query failed:", roleError.message);
+      console.warn("[AuthContext] user_roles query failed (RLS?):", roleError.message);
+    } else if (roleRow?.role) {
+      console.log("[AuthContext] role from user_roles:", roleRow.role);
+      return roleRow.role as UserRole;
     }
-
-    if (explicitRole?.role) {
-      return explicitRole.role as UserRole;
-    }
-
-    // 2. Fall back to email whitelist (for admins added before user_roles was set up)
-    if (user.email) {
-      const { data: whitelistRole, error: wlError } = await supabase
-        .from("mfc_admin_whitelist")
-        .select("role")
-        .eq("email", user.email.toLowerCase())
-        .maybeSingle();
-
-      if (wlError) {
-        console.warn("[AuthContext] mfc_admin_whitelist query failed:", wlError.message);
-      }
-
-      if (whitelistRole?.role) {
-        return whitelistRole.role as UserRole;
-      }
-    }
-
-    // 3. Also check role_invitations for granted roles
-    if (user.email) {
-      const { data: inviteRole, error: invError } = await supabase
-        .from("role_invitations")
-        .select("role")
-        .eq("email", user.email.toLowerCase())
-        .not("granted_at", "is", null)
-        .maybeSingle();
-
-      if (invError) {
-        console.warn("[AuthContext] role_invitations query failed:", invError.message);
-      }
-
-      if (inviteRole?.role) {
-        return inviteRole.role as UserRole;
-      }
-    }
-
-    return null;
-  } catch (error) {
-    console.error("[AuthContext] resolveRole unexpected error:", error);
-    return null;
+  } catch (err) {
+    console.warn("[AuthContext] user_roles timed out or error:", err);
   }
+
+  // ── Step 3: Hardcoded email fallback ─────────────────────────────────────
+  if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+    console.log("[AuthContext] role from email whitelist:", user.email);
+    return "admin";
+  }
+
+  return null;
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -99,9 +90,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authError, setAuthError] = useState<string | null>(null);
 
   const refreshRole = useCallback(async () => {
-    const currentUser = (await supabase.auth.getUser()).data.user;
+    const { data } = await supabase.auth.getUser();
+    const currentUser = data.user;
     if (!currentUser) return;
     const resolvedRole = await resolveRole(currentUser);
+    console.log("[AuthContext] refreshRole result:", resolvedRole);
     setRole(resolvedRole);
   }, []);
 
@@ -122,9 +115,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         if (currentUser) {
           const resolvedRole = await resolveRole(currentUser);
-          if (mounted) {
-            setRole(resolvedRole);
-          }
+          console.log("[AuthContext] onAuthStateChange role:", resolvedRole, "event:", event);
+          if (mounted) setRole(resolvedRole);
         } else {
           setRole(null);
         }
@@ -135,9 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setRole(null);
         }
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
 
       if (event === "SIGNED_IN" && "caches" in window) {
@@ -146,9 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     const fallback = setTimeout(() => {
-      if (mounted) {
-        setLoading(false);
-      }
+      if (mounted) setLoading(false);
     }, 8000);
 
     return () => {
@@ -167,7 +155,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
-
       if (error) throw error;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to start Google sign-in";
@@ -182,12 +169,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await Promise.all(keys.map((key) => caches.delete(key)));
       }
 
-      localStorage.clear();
-      
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.warn("[AuthContext] signOut error:", error.message);
+      // Only clear MFC-specific keys, NOT all localStorage
+      // (clearing all breaks profile/address data that is stored there)
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && !key.startsWith("mfc_profile_") && !key.startsWith("mfc_addresses_")) {
+          keysToRemove.push(key);
+        }
       }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+      const { error } = await supabase.auth.signOut();
+      if (error) console.warn("[AuthContext] signOut error:", error.message);
     } catch (error) {
       console.warn("[AuthContext] signOut exception:", error);
     } finally {

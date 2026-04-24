@@ -30,16 +30,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { UserAddress } from "@/types/app";
 
+// ── Types ──────────────────────────────────────────────────────────────────────
 const ADDRESS_TYPES = ["Home", "Work", "Other"] as const;
 type AddressType = (typeof ADDRESS_TYPES)[number];
 
-const addressTypeIcon: Record<AddressType, React.ReactNode> = {
-  Home: <Home className="w-4 h-4" />,
-  Work: <Briefcase className="w-4 h-4" />,
-  Other: <MapPin className="w-4 h-4" />,
-};
+interface SavedAddress {
+  id: string;
+  address_type: AddressType;
+  full_address: string;
+  is_default: boolean;
+}
 
 interface AddressFormState {
   full_address: string;
@@ -47,16 +48,23 @@ interface AddressFormState {
   is_default: boolean;
 }
 
+const addressTypeIcon: Record<AddressType, React.ReactNode> = {
+  Home: <Home className="w-4 h-4" />,
+  Work: <Briefcase className="w-4 h-4" />,
+  Other: <MapPin className="w-4 h-4" />,
+};
+
 const defaultAddressForm: AddressFormState = {
   full_address: "",
   address_type: "Home",
   is_default: false,
 };
 
-// ── Local profile storage (instant save, no network wait) ──────────────────
+// ── LocalStorage helpers (no DB dependency) ───────────────────────────────────
 const PROFILE_KEY = (uid: string) => `mfc_profile_${uid}`;
+const ADDRESSES_KEY = (uid: string) => `mfc_addresses_${uid}`;
 
-function loadLocalProfile(uid: string): { name: string; phone: string } {
+function loadLocalProfile(uid: string) {
   try {
     const raw = localStorage.getItem(PROFILE_KEY(uid));
     if (raw) return JSON.parse(raw) as { name: string; phone: string };
@@ -65,172 +73,132 @@ function loadLocalProfile(uid: string): { name: string; phone: string } {
 }
 
 function saveLocalProfile(uid: string, name: string, phone: string) {
-  try {
-    localStorage.setItem(PROFILE_KEY(uid), JSON.stringify({ name, phone }));
-  } catch { /* ignore */ }
+  try { localStorage.setItem(PROFILE_KEY(uid), JSON.stringify({ name, phone })); } catch { /* ignore */ }
 }
 
+function loadLocalAddresses(uid: string): SavedAddress[] {
+  try {
+    const raw = localStorage.getItem(ADDRESSES_KEY(uid));
+    if (raw) return JSON.parse(raw) as SavedAddress[];
+  } catch { /* ignore */ }
+  return [];
+}
+
+function saveLocalAddresses(uid: string, addresses: SavedAddress[]) {
+  try { localStorage.setItem(ADDRESSES_KEY(uid), JSON.stringify(addresses)); } catch { /* ignore */ }
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function Profile() {
   const { user, signOut, isAdmin, refreshRole } = useAuth();
   const navigate = useNavigate();
   const { orders } = useCustomerOrders(user?.id);
 
-  // Profile fields
+  // Profile
   const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
 
-  // Address management
-  const [addresses, setAddresses] = useState<UserAddress[]>([]);
-  const [addressLoading, setAddressLoading] = useState(true);
+  // Addresses
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [addressDialog, setAddressDialog] = useState<{
     open: boolean;
     mode: "add" | "edit";
     editId?: string;
     form: AddressFormState;
   }>({ open: false, mode: "add", form: defaultAddressForm });
-  const [addressSaving, setAddressSaving] = useState(false);
 
-  // ── Load profile ───────────────────────────────────────────────────────────
+  // ── Load from localStorage ─────────────────────────────────────────────────
   const loadProfile = useCallback(() => {
     if (!user) return;
-    // Try localStorage first (instant), fall back to Google metadata
     const local = loadLocalProfile(user.id);
     setName(local.name || user.user_metadata?.full_name || "");
     setPhone(local.phone || user.user_metadata?.phone || "");
   }, [user]);
 
-  const loadAddresses = useCallback(async () => {
+  const loadAddresses = useCallback(() => {
     if (!user) return;
-    setAddressLoading(true);
-    const { data } = await supabase
-      .from("mfc_user_addresses")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("is_default", { ascending: false })
-      .order("created_at", { ascending: true });
-    setAddresses((data as UserAddress[]) || []);
-    setAddressLoading(false);
+    setAddresses(loadLocalAddresses(user.id));
   }, [user]);
 
   useEffect(() => {
     loadProfile();
-    void loadAddresses();
+    loadAddresses();
     void refreshRole?.();
   }, [loadProfile, loadAddresses, refreshRole]);
 
-  // ── Save profile — instant via localStorage, async Supabase sync ───────────
-  const handleSave = async () => {
+  // ── Profile save — instant localStorage + background Supabase sync ─────────
+  const handleSave = () => {
     if (!user) return;
-    setSaving(true);
-
-    // 1. Save to localStorage immediately — instant feedback
     saveLocalProfile(user.id, name, phone);
     toast.success("Profile saved!");
     setIsEditing(false);
-    setSaving(false);
-
-    // 2. Attempt background sync to Supabase auth (best-effort, no spinner)
-    void supabase.auth.updateUser({ data: { full_name: name, phone } }).catch((err) => {
-      console.warn("[Profile] Background auth sync failed:", err);
-    });
+    // Background sync (fire & forget — doesn't block UI)
+    void supabase.auth.updateUser({ data: { full_name: name, phone } }).catch((e) =>
+      console.warn("[Profile] background sync failed:", e)
+    );
   };
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    loadProfile(); // revert edits
+  const handleCancel = () => { setIsEditing(false); loadProfile(); };
+
+  // ── Address helpers — pure localStorage ───────────────────────────────────
+  const persist = (updated: SavedAddress[]) => {
+    if (!user) return;
+    setAddresses(updated);
+    saveLocalAddresses(user.id, updated);
   };
 
-  // ── Address helpers ────────────────────────────────────────────────────────
   const openAddDialog = () =>
     setAddressDialog({ open: true, mode: "add", form: { ...defaultAddressForm } });
 
-  const openEditDialog = (addr: UserAddress) =>
+  const openEditDialog = (addr: SavedAddress) =>
     setAddressDialog({
-      open: true,
-      mode: "edit",
-      editId: addr.id,
-      form: {
-        full_address: addr.full_address,
-        address_type: addr.address_type as AddressType,
-        is_default: addr.is_default,
-      },
+      open: true, mode: "edit", editId: addr.id,
+      form: { full_address: addr.full_address, address_type: addr.address_type, is_default: addr.is_default },
     });
 
-  const closeDialog = () =>
-    setAddressDialog((prev) => ({ ...prev, open: false }));
+  const closeDialog = () => setAddressDialog((p) => ({ ...p, open: false }));
 
-  const handleAddressSave = async () => {
-    if (!user) return;
+  const handleAddressSave = () => {
     const { form, mode, editId } = addressDialog;
-    if (!form.full_address.trim()) {
-      toast.error("Address cannot be empty");
-      return;
-    }
-    setAddressSaving(true);
-    try {
-      if (form.is_default) {
-        await supabase
-          .from("mfc_user_addresses")
-          .update({ is_default: false })
-          .eq("user_id", user.id);
-      }
+    if (!form.full_address.trim()) { toast.error("Address cannot be empty"); return; }
 
-      if (mode === "edit" && editId) {
-        const { error } = await supabase
-          .from("mfc_user_addresses")
-          .update({
-            full_address: form.full_address,
-            address_type: form.address_type,
-            is_default: form.is_default,
-          })
-          .eq("id", editId);
-        if (error) throw error;
-        toast.success("Address updated");
-      } else {
-        const isFirst = addresses.length === 0;
-        const { error } = await supabase.from("mfc_user_addresses").insert({
-          user_id: user.id,
-          full_address: form.full_address,
-          address_type: form.address_type,
-          is_default: isFirst || form.is_default,
-        });
-        if (error) throw error;
-        toast.success("Address added");
-      }
+    let updated: SavedAddress[];
 
-      await loadAddresses();
-      closeDialog();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to save address";
-      toast.error(message);
-    } finally {
-      setAddressSaving(false);
+    if (mode === "add") {
+      const isFirst = addresses.length === 0;
+      const newAddr: SavedAddress = {
+        id: crypto.randomUUID(),
+        address_type: form.address_type,
+        full_address: form.full_address,
+        is_default: isFirst || form.is_default,
+      };
+      updated = form.is_default || isFirst
+        ? [...addresses.map((a) => ({ ...a, is_default: false })), newAddr]
+        : [...addresses, newAddr];
+      toast.success("Address added");
+    } else {
+      updated = addresses.map((a) =>
+        a.id === editId
+          ? { ...a, full_address: form.full_address, address_type: form.address_type, is_default: form.is_default }
+          : form.is_default ? { ...a, is_default: false } : a
+      );
+      toast.success("Address updated");
     }
+
+    persist(updated);
+    closeDialog();
   };
 
-  const handleSetDefault = async (addr: UserAddress) => {
-    if (!user || addr.is_default) return;
-    try {
-      await supabase.from("mfc_user_addresses").update({ is_default: false }).eq("user_id", user.id);
-      await supabase.from("mfc_user_addresses").update({ is_default: true }).eq("id", addr.id);
-      toast.success("Default address updated");
-      await loadAddresses();
-    } catch {
-      toast.error("Failed to update default address");
-    }
+  const handleSetDefault = (id: string) => {
+    const updated = addresses.map((a) => ({ ...a, is_default: a.id === id }));
+    persist(updated);
+    toast.success("Default address updated");
   };
 
-  const handleDeleteAddress = async (id: string) => {
-    try {
-      const { error } = await supabase.from("mfc_user_addresses").delete().eq("id", id);
-      if (error) throw error;
-      setAddresses((prev) => prev.filter((a) => a.id !== id));
-      toast.success("Address deleted");
-    } catch {
-      toast.error("Failed to delete address");
-    }
+  const handleDelete = (id: string) => {
+    persist(addresses.filter((a) => a.id !== id));
+    toast.success("Address deleted");
   };
 
   // ── Not logged in ──────────────────────────────────────────────────────────
@@ -260,10 +228,10 @@ export default function Profile() {
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button variant="ghost" size="icon" onClick={handleCancel} disabled={saving}>
+            <Button variant="ghost" size="icon" onClick={handleCancel}>
               <X className="w-5 h-5 text-muted-foreground" />
             </Button>
-            <Button variant="default" size="icon" onClick={handleSave} disabled={saving}>
+            <Button variant="default" size="icon" onClick={handleSave}>
               <Check className="w-5 h-5" />
             </Button>
           </div>
@@ -277,7 +245,6 @@ export default function Profile() {
             ADMIN
           </div>
         )}
-
         {isEditing ? (
           <div className="space-y-4 pt-2">
             <div className="space-y-1">
@@ -314,13 +281,7 @@ export default function Profile() {
             </Button>
           </div>
 
-          {addressLoading ? (
-            <div className="space-y-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-14 bg-muted/30 rounded-2xl animate-pulse" />
-              ))}
-            </div>
-          ) : addresses.length === 0 ? (
+          {addresses.length === 0 ? (
             <button
               onClick={openAddDialog}
               className="w-full flex items-center gap-3 border-2 border-dashed border-border rounded-2xl p-4 hover:border-primary/40 transition-colors text-left"
@@ -343,9 +304,8 @@ export default function Profile() {
                 >
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0
                     ${addr.is_default ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
-                    {addressTypeIcon[addr.address_type as AddressType] ?? <MapPin className="w-4 h-4" />}
+                    {addressTypeIcon[addr.address_type]}
                   </div>
-
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-semibold">{addr.address_type}</span>
@@ -357,12 +317,11 @@ export default function Profile() {
                     </div>
                     <p className="text-xs text-muted-foreground truncate mt-0.5">{addr.full_address}</p>
                   </div>
-
                   <div className="flex items-center gap-0.5 shrink-0">
                     {!addr.is_default && (
                       <button
                         title="Set as default"
-                        onClick={() => void handleSetDefault(addr)}
+                        onClick={() => handleSetDefault(addr.id)}
                         className="w-8 h-8 rounded-full hover:bg-primary/10 flex items-center justify-center transition-colors"
                       >
                         <Star className="w-3.5 h-3.5 text-muted-foreground" />
@@ -377,7 +336,7 @@ export default function Profile() {
                     </button>
                     <button
                       title="Delete"
-                      onClick={() => void handleDeleteAddress(addr.id)}
+                      onClick={() => handleDelete(addr.id)}
                       className="w-8 h-8 rounded-full hover:bg-red-500/10 flex items-center justify-center transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5 text-red-400" />
@@ -405,14 +364,10 @@ export default function Profile() {
         <section className="space-y-4">
           <div className="flex justify-between items-end">
             <h3 className="font-bold text-lg">Recent Orders</h3>
-            <span
-              className="text-sm font-medium text-primary cursor-pointer hover:underline"
-              onClick={() => navigate("/orders")}
-            >
+            <span className="text-sm font-medium text-primary cursor-pointer hover:underline" onClick={() => navigate("/orders")}>
               View All
             </span>
           </div>
-
           <div className="space-y-3">
             {orders.length === 0 ? (
               <div className="p-6 text-center border-2 border-dashed border-border rounded-3xl bg-muted/20 flex flex-col items-center">
@@ -433,9 +388,7 @@ export default function Profile() {
                     <span className="font-bold text-sm">
                       {order.kind === "food" ? "Food Order" : "Delivery"} #{order.id.slice(0, 8)}
                     </span>
-                    <span className="text-xs font-semibold px-2 py-1 bg-muted rounded-md uppercase">
-                      {order.status}
-                    </span>
+                    <span className="text-xs font-semibold px-2 py-1 bg-muted rounded-md uppercase">{order.status}</span>
                   </div>
                   <div className="flex justify-between items-end">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -467,29 +420,20 @@ export default function Profile() {
       <Dialog open={addressDialog.open} onOpenChange={(open) => !open && closeDialog()}>
         <DialogContent className="sm:max-w-md rounded-3xl">
           <DialogHeader>
-            <DialogTitle>
-              {addressDialog.mode === "add" ? "Add New Address" : "Edit Address"}
-            </DialogTitle>
+            <DialogTitle>{addressDialog.mode === "add" ? "Add New Address" : "Edit Address"}</DialogTitle>
           </DialogHeader>
-
           <div className="space-y-4 py-2">
-            {/* Type selector */}
             <div className="space-y-2">
               <Label>Address Type</Label>
               <div className="flex gap-2">
                 {ADDRESS_TYPES.map((type) => (
                   <button
                     key={type}
-                    onClick={() =>
-                      setAddressDialog((prev) => ({
-                        ...prev,
-                        form: { ...prev.form, address_type: type },
-                      }))
-                    }
+                    onClick={() => setAddressDialog((p) => ({ ...p, form: { ...p.form, address_type: type } }))}
                     className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-semibold transition-all
                       ${addressDialog.form.address_type === type
                         ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-muted/30 text-muted-foreground hover:border-border/80"}`}
+                        : "border-border bg-muted/30 text-muted-foreground"}`}
                   >
                     {addressTypeIcon[type]}
                     {type}
@@ -498,40 +442,26 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Address input */}
             <div className="space-y-1">
               <Label>Full Address</Label>
               <Input
                 value={addressDialog.form.full_address}
-                onChange={(e) =>
-                  setAddressDialog((prev) => ({
-                    ...prev,
-                    form: { ...prev.form, full_address: e.target.value },
-                  }))
-                }
+                onChange={(e) => setAddressDialog((p) => ({ ...p, form: { ...p.form, full_address: e.target.value } }))}
                 placeholder="e.g. 42, MG Road, Bangalore 560001"
               />
             </div>
 
-            {/* Default toggle */}
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <div
                 role="checkbox"
                 aria-checked={addressDialog.form.is_default}
-                onClick={() =>
-                  setAddressDialog((prev) => ({
-                    ...prev,
-                    form: { ...prev.form, is_default: !prev.form.is_default },
-                  }))
-                }
+                onClick={() => setAddressDialog((p) => ({ ...p, form: { ...p.form, is_default: !p.form.is_default } }))}
                 className={`w-10 h-6 rounded-full transition-colors cursor-pointer relative shrink-0
                   ${addressDialog.form.is_default ? "bg-primary" : "bg-muted"}`}
               >
                 <div
                   className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform"
-                  style={{
-                    transform: addressDialog.form.is_default ? "translateX(18px)" : "translateX(2px)",
-                  }}
+                  style={{ transform: addressDialog.form.is_default ? "translateX(18px)" : "translateX(2px)" }}
                 />
               </div>
               <span className="text-sm font-medium">Set as default address</span>
@@ -539,15 +469,9 @@ export default function Profile() {
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeDialog} disabled={addressSaving}>
-              Cancel
-            </Button>
-            <Button onClick={() => void handleAddressSave()} disabled={addressSaving}>
-              {addressSaving
-                ? "Saving…"
-                : addressDialog.mode === "add"
-                ? "Add Address"
-                : "Save Changes"}
+            <Button variant="outline" onClick={closeDialog}>Cancel</Button>
+            <Button onClick={handleAddressSave}>
+              {addressDialog.mode === "add" ? "Add Address" : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
