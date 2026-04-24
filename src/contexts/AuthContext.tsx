@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,6 +14,7 @@ interface AuthContextType {
   authError: string | null;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshRole: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,20 +27,68 @@ const AuthContext = createContext<AuthContextType>({
   authError: null,
   signInWithGoogle: async () => undefined,
   signOut: async () => undefined,
+  refreshRole: async () => undefined,
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 async function resolveRole(user: User): Promise<UserRole | null> {
-  const [{ data: explicitRole }, { data: whitelistRole }] = await Promise.all([
-    supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
-    user.email
-      ? supabase.from("mfc_admin_whitelist").select("role").eq("email", user.email.toLowerCase()).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  try {
+    // 1. Check explicit user_roles table first (most authoritative)
+    const { data: explicitRole, error: roleError } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  const role = (explicitRole?.role || whitelistRole?.role) as UserRole | undefined;
-  return role || null;
+    if (roleError) {
+      console.warn("[AuthContext] user_roles query failed:", roleError.message);
+    }
+
+    if (explicitRole?.role) {
+      return explicitRole.role as UserRole;
+    }
+
+    // 2. Fall back to email whitelist (for admins added before user_roles was set up)
+    if (user.email) {
+      const { data: whitelistRole, error: wlError } = await supabase
+        .from("mfc_admin_whitelist")
+        .select("role")
+        .eq("email", user.email.toLowerCase())
+        .maybeSingle();
+
+      if (wlError) {
+        console.warn("[AuthContext] mfc_admin_whitelist query failed:", wlError.message);
+      }
+
+      if (whitelistRole?.role) {
+        return whitelistRole.role as UserRole;
+      }
+    }
+
+    // 3. Also check role_invitations for granted roles
+    if (user.email) {
+      const { data: inviteRole, error: invError } = await supabase
+        .from("role_invitations")
+        .select("role")
+        .eq("email", user.email.toLowerCase())
+        .not("granted_at", "is", null)
+        .maybeSingle();
+
+      if (invError) {
+        console.warn("[AuthContext] role_invitations query failed:", invError.message);
+      }
+
+      if (inviteRole?.role) {
+        return inviteRole.role as UserRole;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("[AuthContext] resolveRole unexpected error:", error);
+    return null;
+  }
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -48,6 +97,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  const refreshRole = useCallback(async () => {
+    const currentUser = (await supabase.auth.getUser()).data.user;
+    if (!currentUser) return;
+    const resolvedRole = await resolveRole(currentUser);
+    setRole(resolvedRole);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -136,7 +192,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isOnboarded = Boolean(user?.user_metadata?.onboarded);
 
   return (
-    <AuthContext.Provider value={{ user, session, role, isAdmin, isOnboarded, loading, authError, signInWithGoogle, signOut }}>
+    <AuthContext.Provider
+      value={{ user, session, role, isAdmin, isOnboarded, loading, authError, signInWithGoogle, signOut, refreshRole }}
+    >
       {children}
     </AuthContext.Provider>
   );
