@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Star, X, Link2, Upload } from "lucide-react";
+import { Loader2, Star, X, Link2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { uploadPublicImage } from "@/lib/supabaseUpload";
 
 interface MultiImageUploadProps {
   images: string[];
@@ -29,27 +29,18 @@ export function MultiImageUpload({
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
     try {
       setUploading(slotIndex);
       setUploadError(false);
-      const ext = file.name.split(".").pop();
-      const path = `menu/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+      const publicUrl = await uploadPublicImage(bucket, "menu", file);
       const newImages = [...images];
-      newImages[slotIndex] = data.publicUrl;
+      newImages[slotIndex] = publicUrl;
       onChange(newImages);
       toast.success("Image uploaded");
     } catch (err: any) {
       setUploadError(true);
-      toast.error(
-        "Upload failed — bucket may not exist. Use 'Paste URL' instead.",
-        { duration: 6000 }
-      );
-      // Auto-switch to URL mode for this slot
+      toast.error(err.message || "Upload failed. Use 'Paste URL' instead.", { duration: 6000 });
       setUrlMode(slotIndex);
       setUrlInput("");
     } finally {
@@ -61,7 +52,11 @@ export function MultiImageUpload({
   const handlePasteUrl = (slotIndex: number) => {
     const trimmed = urlInput.trim();
     if (!trimmed) return toast.error("Enter a valid image URL");
-    try { new URL(trimmed); } catch { return toast.error("Invalid URL format"); }
+    try {
+      new URL(trimmed);
+    } catch {
+      return toast.error("Invalid URL format");
+    }
     const newImages = [...images];
     newImages[slotIndex] = trimmed;
     onChange(newImages);
@@ -81,12 +76,12 @@ export function MultiImageUpload({
     <div className="space-y-3">
       {uploadError && (
         <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
-          ⚠ Storage bucket <code className="font-mono bg-amber-500/20 px-1 rounded">product-images</code> may not exist.
-          Create it in <strong>Supabase → Storage</strong> with Public access, or use "Paste URL" below.
+          Storage upload failed. Confirm the <code className="font-mono bg-amber-500/20 px-1 rounded">{bucket}</code> bucket exists,
+          is public, and has admin upload policies, or use Paste URL below.
         </div>
       )}
       <p className="text-xs text-zinc-500">
-        Up to {maxImages} images · First image is the main display
+        Up to {maxImages} images - first image is the main display
       </p>
       <div className="grid grid-cols-4 gap-3">
         {slots.map((_, slotIdx) => {
@@ -148,13 +143,11 @@ export function MultiImageUpload({
                   >
                     <X className="w-3 h-3" />
                   </button>
-                  {/* Replace overlay */}
                   <label className="absolute inset-0 cursor-pointer opacity-0 hover:opacity-100 transition-opacity rounded-xl overflow-hidden">
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-xs text-white font-bold">
                       Replace
                     </div>
-                    <input type="file" accept="image/*" className="sr-only"
-                      onChange={(e) => handleUpload(e, slotIdx)} />
+                    <input type="file" accept="image/*" className="sr-only" onChange={(e) => handleUpload(e, slotIdx)} />
                   </label>
                 </>
               ) : (
@@ -168,15 +161,12 @@ export function MultiImageUpload({
                     <Loader2 className="w-5 h-5 text-[#FF5A00] animate-spin" />
                   ) : (
                     <>
-                      {/* Upload */}
                       <label className="flex flex-col items-center cursor-pointer group/upload hover:text-white text-zinc-500 transition-colors">
                         <Upload className="w-4 h-4 mb-0.5" />
                         <span className="text-[9px] font-semibold">Upload</span>
-                        <input type="file" accept="image/*" className="sr-only"
-                          onChange={(e) => handleUpload(e, slotIdx)} />
+                        <input type="file" accept="image/*" className="sr-only" onChange={(e) => handleUpload(e, slotIdx)} />
                       </label>
                       <div className="text-[8px] text-zinc-700">or</div>
-                      {/* URL paste */}
                       <button
                         type="button"
                         onClick={() => { setUrlMode(slotIdx); setUrlInput(""); }}

@@ -15,7 +15,21 @@ import {
   User,
   Briefcase,
   X,
+  MessageCircle,
+  FileText,
+  Shield,
+  Map,
 } from "lucide-react";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomerOrders } from "@/hooks/useCustomerOrders";
@@ -99,6 +113,11 @@ export default function Profile() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
 
+  // Settings & Policies
+  const [settings, setSettings] = useState<{ whatsapp_number?: string; cafe_map_url?: string }>({});
+  const [terms, setTerms] = useState<{ title: string; content: string } | null>(null);
+  const [privacy, setPrivacy] = useState<{ title: string; content: string } | null>(null);
+
   // Addresses
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [addressDialog, setAddressDialog] = useState<{
@@ -121,11 +140,27 @@ export default function Profile() {
     setAddresses(loadLocalAddresses(user.id));
   }, [user]);
 
+  const loadSettingsAndPolicies = useCallback(async () => {
+    try {
+      const { data: settingsData } = await (supabase as any).from("app_settings").select("whatsapp_number, cafe_map_url").maybeSingle();
+      if (settingsData) setSettings(settingsData);
+      
+      const { data: policiesData } = await (supabase as any).from("policies").select("*").in("type", ["terms", "privacy"]);
+      if (policiesData) {
+        setTerms(policiesData.find((p: any) => p.type === "terms") || null);
+        setPrivacy(policiesData.find((p: any) => p.type === "privacy") || null);
+      }
+    } catch (error) {
+      console.error("[Profile] Error loading settings/policies:", error);
+    }
+  }, []);
+
   useEffect(() => {
     loadProfile();
     loadAddresses();
+    loadSettingsAndPolicies();
     void refreshRole?.();
-  }, [loadProfile, loadAddresses, refreshRole]);
+  }, [loadProfile, loadAddresses, loadSettingsAndPolicies, refreshRole]);
 
   // ── Profile save — instant localStorage + background Supabase sync ─────────
   const handleSave = () => {
@@ -400,6 +435,101 @@ export default function Profile() {
                 </div>
               ))
             )}
+          </div>
+        </section>
+
+        {/* ── Help & Information ──────────────────────────────────────────── */}
+        <section className="space-y-4 pt-2">
+          <h3 className="font-bold text-lg">Help & Information</h3>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {/* WhatsApp */}
+            <button
+              onClick={() => {
+                if (settings.whatsapp_number) {
+                  window.open(`https://wa.me/${settings.whatsapp_number.replace(/\D/g, '')}`, '_blank');
+                } else {
+                  toast.error("WhatsApp contact not available");
+                }
+              }}
+              className="flex flex-col items-center justify-center p-4 rounded-2xl bg-card border border-border shadow-sm hover:border-green-500/50 hover:bg-green-500/5 transition-all gap-2"
+            >
+              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-600">
+                <MessageCircle className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold">WhatsApp Us</span>
+            </button>
+
+            {/* Google Maps */}
+            <button
+              onClick={() => {
+                if (settings.cafe_map_url) {
+                  window.open(settings.cafe_map_url, '_blank');
+                } else {
+                  toast.error("Location not available");
+                }
+              }}
+              className="flex flex-col items-center justify-center p-4 rounded-2xl bg-card border border-border shadow-sm hover:border-primary/50 hover:bg-primary/5 transition-all gap-2"
+            >
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <Map className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold">Cafe Location</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2 mt-4">
+            {/* Terms & Conditions Drawer */}
+            <Drawer>
+              <DrawerTrigger asChild>
+                <button className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border hover:bg-muted/30 transition-colors w-full text-left">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-sm font-medium">Terms & Conditions</span>
+                  </div>
+                </button>
+              </DrawerTrigger>
+              <DrawerContent className="max-h-[85vh]">
+                <DrawerHeader className="text-left border-b pb-4">
+                  <DrawerTitle>{terms?.title || "Terms & Conditions"}</DrawerTitle>
+                  <DrawerDescription>Please read our terms carefully.</DrawerDescription>
+                </DrawerHeader>
+                <div className="p-4 overflow-y-auto whitespace-pre-wrap text-sm text-muted-foreground">
+                  {terms?.content || "No terms and conditions defined yet."}
+                </div>
+                <DrawerFooter className="pt-2 border-t">
+                  <DrawerClose asChild>
+                    <Button variant="outline" className="w-full h-12 rounded-xl">Close</Button>
+                  </DrawerClose>
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
+
+            {/* Privacy Policy Drawer */}
+            <Drawer>
+              <DrawerTrigger asChild>
+                <button className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border hover:bg-muted/30 transition-colors w-full text-left">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-sm font-medium">Privacy Policy</span>
+                  </div>
+                </button>
+              </DrawerTrigger>
+              <DrawerContent className="max-h-[85vh]">
+                <DrawerHeader className="text-left border-b pb-4">
+                  <DrawerTitle>{privacy?.title || "Privacy Policy"}</DrawerTitle>
+                  <DrawerDescription>How we handle your data.</DrawerDescription>
+                </DrawerHeader>
+                <div className="p-4 overflow-y-auto whitespace-pre-wrap text-sm text-muted-foreground">
+                  {privacy?.content || "No privacy policy defined yet."}
+                </div>
+                <DrawerFooter className="pt-2 border-t">
+                  <DrawerClose asChild>
+                    <Button variant="outline" className="w-full h-12 rounded-xl">Close</Button>
+                  </DrawerClose>
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
           </div>
         </section>
 

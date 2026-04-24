@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { uploadPublicImage } from "@/lib/supabaseUpload";
 
 // Uses mfc_products — the live table in Supabase
 // Columns: id, name, price, category_id, description, images (string[]),
@@ -57,10 +58,12 @@ export default function AdminMenu() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [{ data: prodData }, { data: catData }] = await Promise.all([
+    const [{ data: prodData, error: prodError }, { data: catData, error: catError }] = await Promise.all([
       supabase.from("mfc_products").select("*").order("name"),
       supabase.from("mfc_categories").select("id, name").order("name"),
     ]);
+    if (prodError) toast.error(`Failed to load products: ${prodError.message}`);
+    if (catError) toast.error(`Failed to load categories: ${catError.message}`);
     setItems((prodData as Product[]) || []);
     setCategories((catData as Category[]) || []);
     setLoading(false);
@@ -94,15 +97,10 @@ export default function AdminMenu() {
     setImageUploading(true);
     setBucketError(false);
     try {
-      await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
-      const ext = file.name.split(".").pop();
-      const path = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      setForm((f) => ({ ...f, images: [...f.images, data.publicUrl] }));
+      const publicUrl = await uploadPublicImage(BUCKET, "products", file);
+      setForm((f) => ({ ...f, images: [...f.images, publicUrl] }));
       toast.success("Image uploaded");
-    } catch {
+    } catch (err: any) {
       setBucketError(true);
       toast.error('Bucket missing — paste image URL manually.', { duration: 5000 });
     } finally {

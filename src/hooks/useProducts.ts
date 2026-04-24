@@ -7,12 +7,13 @@ export function useProducts(categoryId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
 
     let query = supabase
-      .from('mfc_menu_items')
+      .from('mfc_products')
       .select('*')
-      .eq('is_available', true);
+      .eq('in_stock', true);
 
     if (categoryId) {
       query = query.eq('category_id', categoryId);
@@ -20,10 +21,25 @@ export function useProducts(categoryId?: string) {
 
     query
       .order('name')
-      .then(({ data }) => {
-        setProducts(data || []);
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error('[useProducts] Failed to load products:', error.message);
+          setProducts([]);
+        } else {
+          setProducts(
+            (data || []).map((product) => ({
+              ...product,
+              image_url: product.images?.[0] || null,
+            }))
+          );
+        }
         setLoading(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [categoryId]);
 
 

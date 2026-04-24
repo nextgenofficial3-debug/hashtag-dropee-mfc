@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { uploadPublicImage } from "@/lib/supabaseUpload";
 
 interface Promotion {
   id: string;
@@ -47,15 +48,10 @@ export default function AdminPromotions() {
     setImageUploading(true);
     setBucketError(false);
     try {
-      await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
-      const ext = file.name.split(".").pop();
-      const path = `banners/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      setForm((f) => ({ ...f, banner_image: data.publicUrl }));
+      const publicUrl = await uploadPublicImage(BUCKET, "banners", file);
+      setForm((f) => ({ ...f, banner_image: publicUrl }));
       toast.success("Banner uploaded!");
-    } catch {
+    } catch (err: any) {
       setBucketError(true);
       toast.error("Bucket missing — paste image URL instead.", { duration: 5000 });
     } finally {

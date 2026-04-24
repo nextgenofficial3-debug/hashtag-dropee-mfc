@@ -1,7 +1,10 @@
 import type { Tables } from "@/integrations/supabase/types";
 
 export type MenuCategory = Tables<"mfc_categories">;
-export type MenuItem = Tables<"mfc_menu_items">;
+export type MenuProduct = Tables<"mfc_products">;
+export type MenuItem = MenuProduct & {
+  image_url: string | null;
+};
 export type FoodOrder = Tables<"mfc_orders">;
 export type DeliveryOrder = Tables<"delivery_orders">;
 export type Reservation = Tables<"mfc_reservations">;

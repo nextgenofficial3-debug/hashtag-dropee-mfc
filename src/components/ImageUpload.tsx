@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from './ui/button';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { uploadPublicImage } from '@/lib/supabaseUpload';
 
 interface Props {
   value: string;
@@ -19,17 +19,8 @@ export function ImageUpload({ value, onChange, bucket = 'product-images' }: Prop
       const file = event.target.files?.[0];
       if (!file) return;
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
-      onChange(data.publicUrl);
+      const publicUrl = await uploadPublicImage(bucket, 'uploads', file);
+      onChange(publicUrl);
       toast.success('Image uploaded!');
     } catch (error: any) {
       toast.error(error.message || 'Upload failed');
