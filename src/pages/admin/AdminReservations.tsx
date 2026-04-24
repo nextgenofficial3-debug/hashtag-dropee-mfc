@@ -117,7 +117,7 @@ export default function AdminReservations() {
         people_count: Number(addForm.people_count) || 2,
         table_type: addForm.table_type,
         special_requests: addForm.special_requests || null,
-        status: "confirmed",
+        status: "pending",
       });
       if (error) throw error;
       toast.success("Manual reservation added!");

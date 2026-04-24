@@ -2,347 +2,314 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  Loader2, Plus, Pencil, Trash2, X, Save, ImageOff, ChevronDown, Flame, Star, Package,
+  Loader2, Plus, Pencil, Trash2, X, Save, UtensilsCrossed, Star, Flame,
+  AlertCircle,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MultiImageUpload } from "@/components/MultiImageUpload";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
-// Uses mfc_products table which has: id, name, description, price, category_id,
-// images (string[]), in_stock, is_bestseller, is_spicy, created_at, updated_at
+// Manages mfc_menu_items — the live table that customer-facing pages query
+// Columns: id, name, price, category_id, description, image_url, is_available, created_at, updated_at
 
-const emptyForm = {
-  name: "",
-  description: "",
-  price: "",
-  is_bestseller: false,
-  is_spicy: false,
-  in_stock: true,
-  images: [] as string[],
-};
-type FormState = typeof emptyForm;
-
-interface Product {
+interface MenuItem {
   id: string;
   name: string;
-  description: string | null;
   price: number;
-  images: string[] | null;
-  in_stock: boolean | null;
-  is_bestseller: boolean | null;
-  is_spicy: boolean | null;
+  category_id: string | null;
+  description: string | null;
+  image_url: string | null;
+  is_available: boolean | null;
   created_at: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+}
+
+const BUCKET = "menu-images"; // Use this bucket name in Supabase Storage
+
+const emptyForm = {
+  name: "", price: "", category_id: "", description: "",
+  image_url: "", is_available: true,
+};
+
 export default function AdminMenu() {
-  const [items, setItems] = useState<Product[]>([]);
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dbError, setDbError] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [bucketError, setBucketError] = useState(false);
+  const [filterCat, setFilterCat] = useState("all");
   const [search, setSearch] = useState("");
 
-  const fetchItems = async () => {
+  const fetchData = async () => {
     setLoading(true);
+    const [{ data: menuData }, { data: catData }] = await Promise.all([
+      supabase.from("mfc_menu_items").select("*").order("name"),
+      supabase.from("mfc_categories").select("id, name").order("name"),
+    ]);
+    setItems((menuData as MenuItem[]) || []);
+    setCategories((catData as Category[]) || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const openAdd = () => { setEditingId(null); setForm(emptyForm); setBucketError(false); setShowDialog(true); };
+  const openEdit = (item: MenuItem) => {
+    setEditingId(item.id);
+    setForm({
+      name: item.name, price: String(item.price),
+      category_id: item.category_id ?? "",
+      description: item.description ?? "", image_url: item.image_url ?? "",
+      is_available: item.is_available ?? true,
+    });
+    setBucketError(false);
+    setShowDialog(true);
+  };
+  const close = () => { setShowDialog(false); setEditingId(null); setForm(emptyForm); };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageUploading(true);
+    setBucketError(false);
     try {
-      const { data, error } = await supabase
-        .from("mfc_products")
-        .select("id, name, description, price, images, in_stock, is_bestseller, is_spicy, created_at")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setItems((data as Product[]) || []);
-      setDbError(null);
-    } catch (err: any) {
-      setDbError(err.message);
-      toast.error("Failed to load products: " + err.message);
+      // Try to ensure bucket exists
+      await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
+      const ext = file.name.split(".").pop();
+      const path = `items/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      setForm((f) => ({ ...f, image_url: data.publicUrl }));
+      toast.success("Image uploaded");
+    } catch {
+      setBucketError(true);
+      toast.error('Bucket missing — paste image URL manually instead.', { duration: 5000 });
     } finally {
-      setLoading(false);
+      setImageUploading(false);
+      e.target.value = "";
     }
   };
 
-  useEffect(() => { fetchItems(); }, []);
-
-  const openAdd = () => { setEditingId(null); setForm(emptyForm); setShowDialog(true); };
-  const openEdit = (item: Product) => {
-    setEditingId(item.id);
-    setForm({
-      name: item.name,
-      description: item.description ?? "",
-      price: String(item.price),
-      is_bestseller: item.is_bestseller ?? false,
-      is_spicy: item.is_spicy ?? false,
-      in_stock: item.in_stock ?? true,
-      images: item.images ?? [],
-    });
-    setShowDialog(true);
-  };
-  const closeDialog = () => { setShowDialog(false); setEditingId(null); setForm(emptyForm); };
-
   const handleSave = async () => {
-    if (!form.name.trim()) return toast.error("Product name required");
-    if (!form.price || isNaN(Number(form.price))) return toast.error("Enter a valid price");
+    if (!form.name.trim()) return toast.error("Name required");
+    if (!form.price || isNaN(Number(form.price))) return toast.error("Valid price required");
     setSaving(true);
     try {
       const payload = {
         name: form.name.trim(),
-        description: form.description.trim() || null,
         price: Number(form.price),
-        images: form.images.filter(Boolean),
-        in_stock: form.in_stock,
-        is_bestseller: form.is_bestseller,
-        is_spicy: form.is_spicy,
-        updated_at: new Date().toISOString(),
+        category_id: form.category_id || null,
+        description: form.description.trim() || null,
+        image_url: form.image_url.trim() || null,
+        is_available: form.is_available,
       };
       if (editingId) {
-        const { error } = await supabase.from("mfc_products").update(payload).eq("id", editingId);
+        const { error } = await supabase.from("mfc_menu_items").update(payload).eq("id", editingId);
         if (error) throw error;
-        toast.success("Product updated!");
+        toast.success("Item updated!");
       } else {
-        const { error } = await supabase.from("mfc_products").insert(payload);
+        const { error } = await supabase.from("mfc_menu_items").insert(payload);
         if (error) throw error;
-        toast.success("Product added!");
+        toast.success("Item added to menu!");
       }
-      closeDialog();
-      fetchItems();
-    } catch (err: any) {
-      toast.error(err.message || "Save failed");
-    } finally {
-      setSaving(false);
-    }
+      close(); fetchData();
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this product? Cannot be undone.")) return;
+    if (!confirm("Delete this menu item?")) return;
     setDeletingId(id);
-    try {
-      const { error } = await supabase.from("mfc_products").delete().eq("id", id);
-      if (error) throw error;
-      toast.success("Product deleted");
-      setItems((prev) => prev.filter((i) => i.id !== id));
-    } catch (err: any) {
-      toast.error("Delete failed: " + err.message);
-    } finally {
-      setDeletingId(null);
-    }
+    const { error } = await supabase.from("mfc_menu_items").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Deleted"); setItems((p) => p.filter((i) => i.id !== id)); }
+    setDeletingId(null);
   };
 
-  const toggleStock = async (id: string, current: boolean | null) => {
-    const newVal = !current;
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, in_stock: newVal } : i));
-    const { error } = await supabase.from("mfc_products").update({ in_stock: newVal }).eq("id", id);
-    if (error) {
-      setItems((prev) => prev.map((i) => i.id === id ? { ...i, in_stock: current } : i));
-      toast.error("Failed to update");
-    }
+  const toggleAvailable = async (item: MenuItem) => {
+    setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, is_available: !item.is_available } : i));
+    const { error } = await supabase.from("mfc_menu_items").update({ is_available: !item.is_available }).eq("id", item.id);
+    if (error) { setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, is_available: item.is_available } : i)); toast.error("Update failed"); }
   };
 
-  const filtered = items.filter((i) =>
-    i.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = items.filter((i) => {
+    const matchCat = filterCat === "all" || i.category_id === filterCat;
+    const matchSearch = !search || i.name.toLowerCase().includes(search.toLowerCase());
+    return matchCat && matchSearch;
+  });
 
-  if (loading) return (
-    <div className="flex h-96 items-center justify-center">
-      <Loader2 className="animate-spin w-8 h-8 text-zinc-500" />
-    </div>
-  );
+  const catName = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "—";
+
+  if (loading) return <div className="flex h-96 items-center justify-center"><Loader2 className="animate-spin w-8 h-8 text-zinc-500" /></div>;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Menu Management</h1>
-          <p className="text-zinc-400 mt-1">Add, edit, delete products. Manage stock & badges.</p>
+          <h1 className="text-3xl font-bold text-zinc-50 flex items-center gap-3">
+            <UtensilsCrossed className="w-7 h-7 text-[#FF5A00]" /> Menu Items
+          </h1>
+          <p className="text-zinc-400 mt-1">{items.length} items in the live menu.</p>
         </div>
         <Button onClick={openAdd} className="bg-[#FF5A00] hover:bg-[#e04f00] text-white font-bold gap-2 rounded-xl h-11 px-5 shrink-0">
-          <Plus className="w-4 h-4" /> Add Product
+          <Plus className="w-4 h-4" /> Add Item
         </Button>
       </div>
 
-      {dbError && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
-          <p className="font-bold mb-1">⚠ Could not load products</p>
-          <p className="text-xs opacity-80">{dbError}</p>
-          <p className="text-xs mt-2 opacity-70">Make sure the <code className="bg-red-500/20 px-1 rounded">mfc_products</code> table exists with RLS allowing authenticated reads.</p>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Input value={search} onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search items…" className="bg-zinc-900 border-zinc-800 max-w-xs" />
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setFilterCat("all")}
+            className={cn("px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors",
+              filterCat === "all" ? "bg-[#FF5A00] text-white" : "bg-zinc-800 text-zinc-400 hover:text-zinc-200")}>
+            All
+          </button>
+          {categories.map((c) => (
+            <button key={c.id} onClick={() => setFilterCat(c.id)}
+              className={cn("px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors",
+                filterCat === c.id ? "bg-[#FF5A00] text-white" : "bg-zinc-800 text-zinc-400 hover:text-zinc-200")}>
+              {c.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid */}
+      {filtered.length === 0 ? (
+        <div className="py-16 text-center text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-2xl">No items found.</div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filtered.map((item) => (
+            <div key={item.id} className={cn("bg-zinc-900 border rounded-2xl overflow-hidden flex flex-col",
+              item.is_available ? "border-zinc-800" : "border-zinc-800 opacity-60")}>
+              {/* Image */}
+              <div className="aspect-square bg-zinc-800 relative">
+                {item.image_url
+                  ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center"><UtensilsCrossed className="w-8 h-8 text-zinc-600" /></div>}
+                {!item.is_available && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <span className="text-xs font-bold text-white bg-zinc-700 px-2 py-1 rounded-lg">Unavailable</span>
+                  </div>
+                )}
+              </div>
+              <div className="p-3 flex flex-col gap-2 flex-1">
+                <div>
+                  <p className="font-bold text-zinc-100 text-sm line-clamp-2 leading-tight">{item.name}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">{catName(item.category_id)}</p>
+                </div>
+                <p className="font-bold text-[#FF5A00]">₹{item.price}</p>
+                <div className="flex items-center justify-between mt-auto pt-2 border-t border-zinc-800">
+                  <Switch checked={item.is_available ?? false} onCheckedChange={() => toggleAvailable(item)} />
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" onClick={() => openEdit(item)} className="w-7 h-7 text-zinc-400 hover:text-white">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)} disabled={deletingId === item.id}
+                      className="w-7 h-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10">
+                      {deletingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      <Input
-        placeholder="Search products…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="bg-zinc-900 border-zinc-800 max-w-sm"
-      />
-
-      {/* Desktop Table */}
-      <div className="hidden md:block bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-zinc-300">
-            <thead className="bg-zinc-950/50 text-zinc-400 text-xs uppercase border-b border-zinc-800">
-              <tr>
-                <th className="px-6 py-4">Image</th>
-                <th className="px-6 py-4">Name</th>
-                <th className="px-6 py-4">Price</th>
-                <th className="px-6 py-4">Tags</th>
-                <th className="px-6 py-4 text-center">In Stock</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-800">
-              {filtered.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-16 text-zinc-500 text-sm">
-                  {items.length === 0 ? "No products yet. Click «Add Product» to get started." : "No results."}
-                </td></tr>
-              ) : filtered.map((item) => (
-                <tr key={item.id} className="hover:bg-zinc-800/40 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex gap-1">
-                      {(item.images?.length ?? 0) > 0 ? (
-                        item.images!.slice(0, 3).map((url, i) => (
-                          <div key={i} className={`w-10 h-10 rounded-lg overflow-hidden border ${i === 0 ? "border-[#FF5A00]" : "border-zinc-700"}`}>
-                            <img src={url} alt="" className="w-full h-full object-cover" />
-                          </div>
-                        ))
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center">
-                          <ImageOff className="w-4 h-4 text-zinc-600" />
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 max-w-[200px]">
-                    <p className="font-bold text-zinc-200 truncate">{item.name}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{item.description}</p>
-                  </td>
-                  <td className="px-6 py-4 font-bold text-green-400">₹{item.price}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-1">
-                      {item.is_bestseller && <span className="text-[10px] font-bold bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5"><Star className="w-2.5 h-2.5" />Best</span>}
-                      {item.is_spicy && <span className="text-[10px] font-bold bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-md flex items-center gap-0.5"><Flame className="w-2.5 h-2.5" />Spicy</span>}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Switch checked={item.in_stock ?? false} onCheckedChange={() => toggleStock(item.id, item.in_stock)} />
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(item)} className="w-8 h-8 text-zinc-400 hover:text-white hover:bg-zinc-700">
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)} disabled={deletingId === item.id} className="w-8 h-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10">
-                        {deletingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="md:hidden space-y-3">
-        {filtered.length === 0 ? (
-          <div className="text-center py-12 text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-2xl">
-            {items.length === 0 ? "No products yet." : "No results."}
-          </div>
-        ) : filtered.map((item) => (
-          <div key={item.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex gap-3">
-            <div className="w-16 h-16 rounded-xl overflow-hidden border border-zinc-700 shrink-0">
-              {item.images?.[0] ? (
-                <img src={item.images[0]} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-zinc-600" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-bold text-zinc-200 text-sm truncate">{item.name}</p>
-                  <p className="text-green-400 font-bold text-sm">₹{item.price}</p>
-                </div>
-                <Switch checked={item.in_stock ?? false} onCheckedChange={() => toggleStock(item.id, item.in_stock)} />
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex gap-1">
-                  {item.is_bestseller && <span className="text-[10px] font-bold bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-md">Best</span>}
-                  {item.is_spicy && <span className="text-[10px] font-bold bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-md">Spicy</span>}
-                </div>
-                <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => openEdit(item)} className="w-8 h-8 text-zinc-400 hover:text-white">
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id)} className="w-8 h-8 text-zinc-500 hover:text-red-400">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Add/Edit Dialog */}
+      {/* Dialog */}
       {showDialog && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={closeDialog} />
-          <div className="relative bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex items-center justify-between z-10">
-              <h2 className="text-xl font-bold text-zinc-50">{editingId ? "Edit Product" : "Add New Product"}</h2>
-              <button onClick={closeDialog} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <X className="w-5 h-5" />
-              </button>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={close} />
+          <div className="relative bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto">
+            <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-5 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-zinc-50">{editingId ? "Edit Item" : "Add Menu Item"}</h2>
+              <button onClick={close} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-5 space-y-4">
+              {/* Image preview + upload */}
               <div className="space-y-2">
-                <Label className="text-zinc-300 font-semibold">Product Images (up to 4)</Label>
-                <MultiImageUpload images={form.images} onChange={(imgs) => setForm({ ...form, images: imgs })} maxImages={4} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-zinc-300">Product Name *</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Crispy Chicken Burger" className="bg-zinc-950 border-zinc-700" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-zinc-300">Description</Label>
-                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Short description…" rows={3} className="bg-zinc-950 border-zinc-700 resize-none" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-zinc-300">Price (₹) *</Label>
-                <Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="0.00" className="bg-zinc-950 border-zinc-700" />
-              </div>
-              {/* Toggles */}
-              <div className="grid gap-3">
-                {[
-                  { key: "in_stock", label: "In Stock", desc: "Show as available on menu" },
-                  { key: "is_bestseller", label: "🌟 Bestseller", desc: "Show bestseller badge" },
-                  { key: "is_spicy", label: "🌶 Spicy", desc: "Show spicy badge" },
-                ].map(({ key, label, desc }) => (
-                  <div key={key} className="flex items-center justify-between p-3 bg-zinc-950 rounded-xl border border-zinc-800">
-                    <div>
-                      <p className="font-medium text-zinc-200 text-sm">{label}</p>
-                      <p className="text-xs text-zinc-500">{desc}</p>
-                    </div>
-                    <Switch
-                      checked={form[key as keyof FormState] as boolean}
-                      onCheckedChange={(v) => setForm({ ...form, [key]: v })}
-                    />
+                <Label className="text-zinc-400 text-xs">Image</Label>
+                {form.image_url && (
+                  <div className="relative rounded-xl overflow-hidden aspect-video bg-zinc-800">
+                    <img src={form.image_url} alt="" className="w-full h-full object-cover"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                    <button onClick={() => setForm({ ...form, image_url: "" })}
+                      className="absolute top-2 right-2 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-red-500">
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
-                ))}
+                )}
+                <div className="flex gap-2">
+                  <label className={cn("flex-1 flex items-center justify-center gap-2 h-10 px-3 rounded-xl border cursor-pointer text-sm font-semibold transition-colors",
+                    imageUploading ? "border-zinc-700 text-zinc-600 cursor-not-allowed" : "border-[#FF5A00]/40 text-[#FF5A00] hover:bg-[#FF5A00]/10")}>
+                    {imageUploading ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</> : "📁 Upload Image"}
+                    <input type="file" accept="image/*" className="sr-only" disabled={imageUploading}
+                      onChange={handleImageUpload} />
+                  </label>
+                </div>
+                {bucketError && (
+                  <div className="flex items-start gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>Storage bucket not found. Paste an image URL below instead. (Create "<strong>menu-images</strong>" bucket in Supabase→Storage to enable uploads.)</span>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <Label className="text-zinc-500 text-[11px]">Or paste image URL</Label>
+                  <Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                    placeholder="https://…" className="bg-zinc-950 border-zinc-700 h-9 text-sm" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-zinc-400 text-xs">Name *</Label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-zinc-950 border-zinc-700" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-zinc-400 text-xs">Price (₹) *</Label>
+                  <Input type="number" min="0" step="0.5" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="bg-zinc-950 border-zinc-700" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-zinc-400 text-xs">Category</Label>
+                  <select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                    className="w-full h-10 bg-zinc-950 border border-zinc-700 rounded-md px-3 text-zinc-200 text-sm">
+                    <option value="">— None —</option>
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-zinc-400 text-xs">Description</Label>
+                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={2} className="bg-zinc-950 border-zinc-700 resize-none" />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-zinc-950 rounded-xl border border-zinc-800">
+                <div><p className="font-medium text-zinc-200 text-sm">Available</p><p className="text-xs text-zinc-500">Show on customer menu</p></div>
+                <Switch checked={form.is_available} onCheckedChange={(v) => setForm({ ...form, is_available: v })} />
               </div>
             </div>
-            <div className="sticky bottom-0 bg-zinc-900 border-t border-zinc-800 px-6 py-4 flex gap-3 justify-end">
-              <Button variant="ghost" onClick={closeDialog} className="text-zinc-400 hover:text-white">Cancel</Button>
-              <Button onClick={handleSave} disabled={saving} className="bg-[#FF5A00] hover:bg-[#e04f00] text-white font-bold gap-2 px-6">
+            <div className="sticky bottom-0 bg-zinc-900 border-t border-zinc-800 px-5 py-4 flex gap-3 justify-end">
+              <Button variant="ghost" onClick={close} className="text-zinc-400">Cancel</Button>
+              <Button onClick={handleSave} disabled={saving} className="bg-[#FF5A00] hover:bg-[#e04f00] text-white gap-2">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {editingId ? "Save Changes" : "Add Product"}
+                {editingId ? "Save" : "Add Item"}
               </Button>
             </div>
           </div>

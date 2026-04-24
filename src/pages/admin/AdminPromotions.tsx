@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Plus, Pencil, Trash2, X, Save, Megaphone, ImageIcon } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, X, Save, Megaphone, ImageIcon, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,33 @@ export default function AdminPromotions() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [bucketError, setBucketError] = useState(false);
+
+  const BUCKET = "promotion-banners";
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageUploading(true);
+    setBucketError(false);
+    try {
+      await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
+      const ext = file.name.split(".").pop();
+      const path = `banners/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      setForm((f) => ({ ...f, banner_image: data.publicUrl }));
+      toast.success("Banner uploaded!");
+    } catch {
+      setBucketError(true);
+      toast.error("Bucket missing — paste image URL instead.", { duration: 5000 });
+    } finally {
+      setImageUploading(false);
+      e.target.value = "";
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -183,9 +210,32 @@ export default function AdminPromotions() {
                 <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="bg-zinc-950 border-zinc-700" /></div>
               <div className="space-y-1.5"><Label className="text-zinc-400 text-xs">Description</Label>
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="bg-zinc-950 border-zinc-700 resize-none" /></div>
-              <div className="space-y-1.5"><Label className="text-zinc-400 text-xs">Banner Image URL</Label>
-                <Input value={form.banner_image} onChange={(e) => setForm({ ...form, banner_image: e.target.value })} placeholder="https://…" className="bg-zinc-950 border-zinc-700" />
-                {form.banner_image && <img src={form.banner_image} className="w-full h-28 object-cover rounded-xl mt-2" alt="" onError={(e) => (e.currentTarget.style.display = "none")} />}</div>
+              <div className="space-y-1.5">
+                <Label className="text-zinc-400 text-xs">Banner Image</Label>
+                {form.banner_image && (
+                  <div className="relative rounded-xl overflow-hidden">
+                    <img src={form.banner_image} className="w-full h-32 object-cover rounded-xl" alt=""
+                      onError={(e) => (e.currentTarget.style.display = "none")} />
+                    <button onClick={() => setForm({ ...form, banner_image: "" })}
+                      className="absolute top-2 right-2 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-red-500">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                <label className={cn("flex items-center justify-center gap-2 h-10 px-3 rounded-xl border cursor-pointer text-sm font-semibold transition-colors w-full",
+                  imageUploading ? "border-zinc-700 text-zinc-600" : "border-[#FF5A00]/40 text-[#FF5A00] hover:bg-[#FF5A00]/10")}>
+                  {imageUploading ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</> : "📁 Upload Banner Image"}
+                  <input type="file" accept="image/*" className="sr-only" disabled={imageUploading} onChange={handleBannerUpload} />
+                </label>
+                {bucketError && (
+                  <div className="flex items-start gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>Storage bucket not found. Create "<strong>promotion-banners</strong>" in Supabase→Storage, or paste a URL below.</span>
+                  </div>
+                )}
+                <Input value={form.banner_image} onChange={(e) => setForm({ ...form, banner_image: e.target.value })}
+                  placeholder="Or paste URL: https://…" className="bg-zinc-950 border-zinc-700" />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5"><Label className="text-zinc-400 text-xs">Discount %</Label>
                   <Input type="number" min="0" max="100" value={form.discount_percentage} onChange={(e) => setForm({ ...form, discount_percentage: e.target.value })} className="bg-zinc-950 border-zinc-700" /></div>

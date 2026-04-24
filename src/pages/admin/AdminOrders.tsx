@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, ArrowRight, Pencil, X, Save } from "lucide-react";
+import { Loader2, ArrowRight, Pencil, X, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +52,7 @@ export default function AdminOrders() {
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -92,6 +93,22 @@ export default function AdminOrders() {
       toast.success(`Order → ${newStatus.replace(/_/g, " ")}`);
     } catch (err: any) {
       toast.error("Failed to update status");
+    }
+  };
+
+  /* ── Delete order ───────────────────────────────── */
+  const handleDelete = async (orderId: string) => {
+    if (!confirm("Permanently delete this order? This cannot be undone.")) return;
+    setDeletingId(orderId);
+    try {
+      const { error } = await supabase.from("mfc_orders").delete().eq("id", orderId);
+      if (error) throw error;
+      toast.success("Order deleted");
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    } catch (err: any) {
+      toast.error("Delete failed: " + err.message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -288,6 +305,18 @@ export default function AdminOrders() {
                           onClick={() => openEdit(order)}
                         >
                           <Pencil className="w-4 h-4" />
+                        </Button>
+                        {/* Delete */}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="w-8 h-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                          onClick={() => handleDelete(order.id)}
+                          disabled={deletingId === order.id}
+                        >
+                          {deletingId === order.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <Trash2 className="w-4 h-4" />}
                         </Button>
                       </div>
                     </td>
