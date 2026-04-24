@@ -182,7 +182,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await Promise.all(keys.map((key) => caches.delete(key)));
       }
 
-      await supabase.auth.signOut();
+      localStorage.clear();
+      
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.warn("[AuthContext] signOut error:", error.message);
+      }
+    } catch (error) {
+      console.warn("[AuthContext] signOut exception:", error);
     } finally {
       window.location.href = "/auth/login";
     }

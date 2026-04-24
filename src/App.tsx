@@ -13,6 +13,7 @@ import AuthCallbackHandler from "./pages/auth/AuthCallbackHandler";
 import Shop from "./pages/Shop";
 import Cart from "./pages/Cart";
 import Profile from "./pages/Profile";
+import Notifications from "./pages/Notifications";
 import Discover from "./pages/Discover";
 import Checkout from "./pages/Checkout";
 import PickAndDrop from "./pages/PickAndDrop";
@@ -165,6 +166,7 @@ const App = () => (
             <Route path="/" element={<OnboardingGuard><MainLayout><Index /></MainLayout></OnboardingGuard>} />
             <Route path="/shop" element={<OnboardingGuard><MainLayout><Shop /></MainLayout></OnboardingGuard>} />
             <Route path="/cart" element={<OnboardingGuard><MainLayout><Cart /></MainLayout></OnboardingGuard>} />
+            <Route path="/notifications" element={<OnboardingGuard><MainLayout><Notifications /></MainLayout></OnboardingGuard>} />
             <Route path="/profile" element={<OnboardingGuard><MainLayout><Profile /></MainLayout></OnboardingGuard>} />
             <Route path="/discover" element={<OnboardingGuard><MainLayout><Discover /></MainLayout></OnboardingGuard>} />
             <Route path="/checkout" element={<OnboardingGuard><Checkout /></OnboardingGuard>} />
