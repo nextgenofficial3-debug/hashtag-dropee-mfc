@@ -103,7 +103,7 @@ export default function AdminWhitelist() {
     try {
       const { error } = await supabase
         .from("mfc_admin_whitelist")
-        .insert({ email: newEmail.trim().toLowerCase(), role: newRole });
+        .insert({ email: newEmail.trim().toLowerCase(), role: newRole as "admin" | "super_admin" | "moderator" | "agent" | "user" });
       if (error) throw error;
       toast.success("Admin added to whitelist");
       setNewEmail("");

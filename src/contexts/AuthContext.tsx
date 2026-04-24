@@ -52,17 +52,19 @@ async function resolveRole(user: User): Promise<UserRole | null> {
 
   // ── Step 2: Check user_roles table (with timeout guard) ───────────────────
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
-
-    const { data: roleRow, error: roleError } = await supabase
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), 3000)
+    );
+    const query = supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .maybeSingle()
-      .abortSignal(controller.signal);
+      .maybeSingle();
 
-    clearTimeout(timer);
+    const { data: roleRow, error: roleError } = await Promise.race([
+      query,
+      timeout,
+    ]);
 
     if (roleError) {
       console.warn("[AuthContext] user_roles query failed (RLS?):", roleError.message);
